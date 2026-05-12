@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased text-gray-800;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}
+
+@layer components {
+  /* ── Primary button ── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold text-white
+      bg-gradient-to-br from-blue-500 to-blue-700
+      shadow-btn transition-all duration-150
+      hover:from-blue-600 hover:to-blue-800 hover:shadow-btn-hover hover:-translate-y-px
+      active:translate-y-0 active:shadow-btn
+      disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* ── Secondary / outline button ── */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium
+      border border-gray-300 text-gray-700 bg-white
+      shadow-card transition-all duration-150
+      hover:bg-gray-50 hover:border-gray-400 hover:-translate-y-px hover:shadow-card-lg
+      active:translate-y-0 active:shadow-card
+      disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* ── Danger button ── */
+  .btn-danger {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold text-white
+      bg-gradient-to-br from-red-500 to-red-700
+      shadow-[0_4px_6px_-1px_rgba(220,38,38,0.35)] transition-all duration-150
+      hover:from-red-600 hover:to-red-800 hover:-translate-y-px
+      active:translate-y-0
+      disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* ── Form input ── */
+  .form-input {
+    @apply w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white
+      shadow-sm transition-all duration-150
+      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-400
+      placeholder:text-gray-400;
+  }
+
+  /* ── Card ── */
+  .card {
+    @apply bg-white rounded-xl border border-gray-200 shadow-card;
+  }
+
+  /* ── Section heading ── */
+  .page-title {
+    @apply text-xl font-bold text-gray-900 tracking-tight;
+  }
+}

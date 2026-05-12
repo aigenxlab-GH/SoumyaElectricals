@@ -1,0 +1,7 @@
+import { z } from 'zod'
+
+export const CalendarQuerySchema = z.object({
+  user_id: z.string().uuid().optional(),
+  year: z.coerce.number().int().min(2000).max(2100),
+  month: z.coerce.number().int().min(1).max(12),
+})

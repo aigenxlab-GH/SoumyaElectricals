@@ -1,0 +1,10 @@
+CREATE INDEX idx_timecards_user_date ON timecards (user_id, date);
+CREATE INDEX idx_timecards_status ON timecards (status);
+CREATE INDEX idx_overtime_user_date ON overtime (user_id, date);
+CREATE INDEX idx_overtime_status ON overtime (status);
+CREATE INDEX idx_leaves_user_date ON leaves (user_id, date);
+CREATE INDEX idx_leaves_status ON leaves (status);
+CREATE INDEX idx_users_manager_id ON users (manager_id);
+CREATE INDEX idx_users_role ON users (role);
+CREATE INDEX idx_users_employee_id ON users (employee_id);
+CREATE INDEX idx_holidays_date ON holidays (date);
