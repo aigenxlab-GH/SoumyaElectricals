@@ -20,7 +20,32 @@ import cronRouter from './modules/cron/cron.router'
 
 const app = express()
 
-app.use(cors({ origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173', credentials: true }))
+// CORS — accepts comma-separated origins in CORS_ORIGIN, plus optional wildcard
+// prefixes (e.g. "https://*.vercel.app") for preview deploys.
+const corsAllowList = (process.env.CORS_ORIGIN ?? 'http://localhost:5173')
+  .split(',').map((s) => s.trim()).filter(Boolean)
+
+function originAllowed(origin: string): boolean {
+  return corsAllowList.some((pattern) => {
+    if (pattern === origin) return true
+    if (pattern.includes('*')) {
+      // Convert glob to regex: escape dots, replace * with .*
+      const rx = new RegExp('^' + pattern.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$')
+      return rx.test(origin)
+    }
+    return false
+  })
+}
+
+app.use(cors({
+  origin: (origin, cb) => {
+    // Server-to-server / curl / Postman have no origin — allow
+    if (!origin) return cb(null, true)
+    if (originAllowed(origin)) return cb(null, true)
+    return cb(new Error(`CORS: origin ${origin} not allowed`))
+  },
+  credentials: true,
+}))
 app.use(express.json())
 app.use(requestId)
 app.use(apiRateLimit)
