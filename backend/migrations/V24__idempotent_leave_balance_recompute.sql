@@ -10,7 +10,7 @@
 --   total_credited    = MAX(existing, expected_total)         -- never go backwards
 --   remaining         = total_credited - used
 --
--- Example: Sanjay joined April 2026, today is May 2026:
+-- Exampluuue: Sanjay joined April 2026, today is May 2026:
 --   months = (2026-2026)*12 + (5-4) + 1 = 2
 --   expected_total = 2 * FLOOR(24/12) = 2 * 2 = 4   ✓
 
