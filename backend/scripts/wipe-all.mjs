@@ -6,10 +6,15 @@
  * Run: node backend/scripts/wipe-all.mjs
  */
 
+import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
 
-const SUPABASE_URL     = 'https://mafdakbwchpmqqihpnbb.supabase.co'
-const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hZmRha2J3Y2hwbXFxaWhwbmJiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODI2ODc4MywiZXhwIjoyMDkzODQ0NzgzfQ.BYnGfuhFdgak2Uml0nXPF4Qjw57xUuYMjdZnQlJcnEc'
+const SUPABASE_URL     = process.env.SUPABASE_URL
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error('❌  Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in backend/.env')
+  process.exit(1)
+}
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
