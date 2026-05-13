@@ -18,6 +18,7 @@ import UserManagement from '../pages/owner/UserManagement'
 import CreateUser from '../pages/owner/CreateUser'
 import EditUser from '../pages/owner/EditUser'
 import UserDetail from '../pages/owner/UserDetail'
+import Profile from '../pages/Profile'
 import SystemConfig from '../pages/owner/SystemConfig'
 import ProductList from '../pages/owner/ProductList'
 import AddProduct from '../pages/owner/AddProduct'
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: '/dashboard', element: <Dashboard /> },
+          { path: '/profile',   element: <Profile /> },
           { path: '/my-timecard', element: <MyTimecard /> },
           { path: '/my-leave', element: <MyLeave /> },
           { path: '/my-calendar', element: <MyCalendar /> },

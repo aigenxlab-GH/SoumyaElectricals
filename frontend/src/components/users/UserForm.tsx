@@ -113,11 +113,11 @@ export function UserForm(props: Props) {
       {/* ── Dates ── */}
       <div className="grid grid-cols-2 gap-4">
         <Field label="Date of Birth" required error={errors.date_of_birth?.message}>
-          <input type="date" {...register('date_of_birth')} className={inputCls} />
+          <input type="date" max={new Date().toISOString().split('T')[0]} {...register('date_of_birth')} className={inputCls} />
         </Field>
         {isCreate ? (
           <Field label="Date of Joining" required error={createForm.formState.errors.date_of_joining?.message}>
-            <input type="date" {...createForm.register('date_of_joining')} className={inputCls} />
+            <input type="date" max={new Date().toISOString().split('T')[0]} {...createForm.register('date_of_joining')} className={inputCls} />
           </Field>
         ) : (
           <div>

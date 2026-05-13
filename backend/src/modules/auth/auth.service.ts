@@ -19,6 +19,13 @@ export const authService = {
 
     const user = await authRepository.findUserByEmployeeId(dto.employee_id)
 
+    // Back-fill leave_balance so it reflects months elapsed since joining.
+    // Idempotent — safe to call on every login. Errors are non-fatal.
+    if (user?.id) {
+      const { error: rpcErr } = await supabase.rpc('recompute_leave_balance', { p_user_id: user.id })
+      if (rpcErr) console.warn('recompute_leave_balance failed:', rpcErr.message)
+    }
+
     return {
       access_token: data.session.access_token,
       refresh_token: data.session.refresh_token,

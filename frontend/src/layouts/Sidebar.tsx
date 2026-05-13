@@ -35,8 +35,17 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* User info */}
-      <div className="px-4 py-3 border-b border-white/10">
+      {/* User info — clickable, opens profile */}
+      <NavLink
+        to="/profile"
+        title="View your profile"
+        className={({ isActive }) =>
+          cn(
+            'block px-4 py-3 border-b border-white/10 transition-colors',
+            isActive ? 'bg-white/10' : 'hover:bg-white/5'
+          )
+        }
+      >
         <div className="flex items-center gap-2.5">
           <div className="h-8 w-8 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
             <span className="text-amber-400 text-xs font-bold">
@@ -48,7 +57,7 @@ export default function Sidebar() {
             <p className="text-white/40 text-xs truncate capitalize">{user.employee_id} · {user.role}</p>
           </div>
         </div>
-      </div>
+      </NavLink>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
