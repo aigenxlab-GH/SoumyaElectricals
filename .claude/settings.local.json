@@ -58,7 +58,14 @@
       "Bash(curl -s http://localhost:5173 -o /dev/null -w \"%{http_code}\")",
       "Bash(Get-Content \"C:\\\\Users\\\\Admin\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--AIGenXLab-Projects-Soumya-Electricals-SoumyaElectricals\\\\813fa497-dd60-490d-92c9-e1f13462ebc4\\\\tasks\\\\bqijzp817.output\")",
       "Bash(curl -s http://localhost:8585/api/v1/config -o /dev/null -w \"%{http_code}\")",
-      "Bash(node scripts/wipe-products.mjs)"
+      "Bash(node scripts/wipe-products.mjs)",
+      "Bash(git -C /c/AIGenXLab/Projects/Soumya-Electricals/SoumyaElectricals status -s)",
+      "Bash(git -C /c/AIGenXLab/Projects/Soumya-Electricals/SoumyaElectricals log --oneline -5)",
+      "Bash(git -C /c/AIGenXLab/Projects/Soumya-Electricals/SoumyaElectricals rev-list --left-right --count origin/main...HEAD)",
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(node scripts/reset-app-data.mjs)"
     ]
   }
 }

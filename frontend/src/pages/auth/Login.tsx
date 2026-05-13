@@ -10,6 +10,7 @@ import { useLogin } from '../../hooks/useAuth'
 import { authApi } from '../../api/auth.api'
 import { setAccessToken } from '../../api/client'
 import { useAuthStore } from '../../store/auth.store'
+import { PasswordInput } from '../../common/PasswordInput'
 
 const FirstLoginSchema = z.object({
   employee_id: z.string().min(1, 'Employee ID is required'),
@@ -153,7 +154,7 @@ export default function Login() {
           </div>
           <div>
             <label className={labelCls}>Password</label>
-            <input {...signInForm.register('password')} type="password" className={inputCls} autoComplete="current-password" />
+            <PasswordInput {...signInForm.register('password')} className={inputCls} autoComplete="current-password" />
             {signInForm.formState.errors.password && (
               <p className={errCls}>{signInForm.formState.errors.password.message}</p>
             )}
@@ -190,21 +191,21 @@ export default function Login() {
           </div>
           <div>
             <label className={labelCls}>Current Password</label>
-            <input {...changeForm.register('current_password')} type="password" className={inputCls} placeholder="Your current / default password" autoComplete="current-password" />
+            <PasswordInput {...changeForm.register('current_password')} className={inputCls} placeholder="Your current / default password" autoComplete="current-password" />
             {changeForm.formState.errors.current_password && (
               <p className={errCls}>{changeForm.formState.errors.current_password.message}</p>
             )}
           </div>
           <div>
             <label className={labelCls}>New Password</label>
-            <input {...changeForm.register('new_password')} type="password" className={inputCls} placeholder="Min. 8 characters" autoComplete="new-password" />
+            <PasswordInput {...changeForm.register('new_password')} className={inputCls} placeholder="Min. 8 characters" autoComplete="new-password" />
             {changeForm.formState.errors.new_password && (
               <p className={errCls}>{changeForm.formState.errors.new_password.message}</p>
             )}
           </div>
           <div>
             <label className={labelCls}>Confirm New Password</label>
-            <input {...changeForm.register('confirm_password')} type="password" className={inputCls} autoComplete="new-password" />
+            <PasswordInput {...changeForm.register('confirm_password')} className={inputCls} autoComplete="new-password" />
             {changeForm.formState.errors.confirm_password && (
               <p className={errCls}>{changeForm.formState.errors.confirm_password.message}</p>
             )}

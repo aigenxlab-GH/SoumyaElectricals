@@ -5,10 +5,11 @@ import { ChangePasswordSchema } from '@soumya/shared'
 import type { ChangePasswordDto } from '@soumya/shared'
 import { useChangePassword } from '../../hooks/useAuth'
 import { useAuthStore } from '../../store/auth.store'
+import { PasswordInput } from '../../common/PasswordInput'
 
 export default function ChangePassword() {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, updateUser } = useAuthStore()
   const { mutate: changePassword, isPending, error } = useChangePassword()
 
   const { register, handleSubmit, formState: { errors } } = useForm<ChangePasswordDto>({
@@ -18,8 +19,10 @@ export default function ChangePassword() {
   function onSubmit(dto: ChangePasswordDto) {
     changePassword(dto, {
       onSuccess: () => {
-        if (user?.role === 'owner') navigate('/owner/dashboard')
-        else navigate('/dashboard')
+        // Sync local auth state so the ProtectedRoute force-password gate lets us through
+        updateUser({ is_default_password: false })
+        if (user?.role === 'owner') navigate('/owner/dashboard', { replace: true })
+        else navigate('/dashboard', { replace: true })
       },
     })
   }
@@ -44,13 +47,13 @@ export default function ChangePassword() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">Current Password</label>
-          <input {...register('old_password')} type="password" className="form-input" autoComplete="current-password" />
+          <PasswordInput {...register('old_password')} className="form-input" autoComplete="current-password" />
           {errors.old_password && <p className="text-xs text-red-600 mt-1.5">{errors.old_password.message}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1.5">New Password</label>
-          <input {...register('new_password')} type="password" className="form-input" autoComplete="new-password" />
+          <PasswordInput {...register('new_password')} className="form-input" autoComplete="new-password" />
           {errors.new_password && <p className="text-xs text-red-600 mt-1.5">{errors.new_password.message}</p>}
         </div>
 

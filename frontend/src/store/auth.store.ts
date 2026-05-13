@@ -13,6 +13,7 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   setAuth: (user: User, tokens: AuthTokens) => void
+  updateUser: (patch: Partial<User>) => void
   clearAuth: () => void
   isAuthenticated: boolean
 }
@@ -27,6 +28,7 @@ export function useAuthStore(): AuthContextValue {
 
 export function useAuthState(): AuthState & {
   setAuth: (user: User, tokens: AuthTokens) => void
+  updateUser: (patch: Partial<User>) => void
   clearAuth: () => void
 } {
   const [state, setState] = useState<AuthState>({ user: null, tokens: null })
@@ -35,9 +37,13 @@ export function useAuthState(): AuthState & {
     setState({ user, tokens })
   }, [])
 
+  const updateUser = useCallback((patch: Partial<User>) => {
+    setState((s) => (s.user ? { ...s, user: { ...s.user, ...patch } } : s))
+  }, [])
+
   const clearAuth = useCallback(() => {
     setState({ user: null, tokens: null })
   }, [])
 
-  return { ...state, setAuth, clearAuth }
+  return { ...state, setAuth, updateUser, clearAuth }
 }
