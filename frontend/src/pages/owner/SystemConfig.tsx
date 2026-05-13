@@ -12,6 +12,9 @@ const inputCls = 'border border-gray-300 rounded-md px-3 py-2 text-sm focus:outl
 export default function SystemConfig() {
   const { data, isLoading } = useSystemConfig()
   const { mutate: save, isPending, error: saveError } = useSaveConfig()
+  // Annual leave days can only be edited in December (IST). Other settings remain free to edit.
+  const istMonth = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).getMonth() + 1
+  const isDecember = istMonth === 12
   const [showConfirm, setShowConfirm] = useState(false)
   const [pendingValues, setPendingValues] = useState<SystemConfigDto | null>(null)
   const [cancelledLeaves, setCancelledLeaves] = useState<number | null>(null)
@@ -197,9 +200,14 @@ export default function SystemConfig() {
           <h2 className="text-base font-medium text-gray-900">General Settings</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Annual Leave Days</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Annual Leave Days
+                {!isDecember && <span className="ml-1.5 text-xs font-normal text-amber-600">🔒 editable in December only</span>}
+              </label>
               <input type="number" {...register('annual_leave_days', { valueAsNumber: true })}
-                className={`${inputCls} w-full`} min={1} max={365} />
+                disabled={!isDecember}
+                title={!isDecember ? 'Annual leave days can only be updated in December' : undefined}
+                className={`${inputCls} w-full ${!isDecember ? 'bg-gray-100 cursor-not-allowed' : ''}`} min={1} max={365} />
               {errors.annual_leave_days && (
                 <p className="mt-1 text-xs text-red-600">{errors.annual_leave_days.message}</p>
               )}
