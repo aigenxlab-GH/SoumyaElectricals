@@ -5,7 +5,7 @@ export const authRepository = {
   async findUserByEmployeeId(employeeId: string) {
     const { data, error } = await supabase
       .from('users')
-      .select('id, employee_id, full_name, role, is_default_password, manager_id')
+      .select('id, employee_id, full_name, role, is_default_password, manager_id, sex, date_of_birth, date_of_joining, phone, address, email, is_active, created_at, updated_at')
       .eq('employee_id', employeeId)
       .eq('is_active', true)
       .single()
