@@ -17,6 +17,8 @@ import productRouter from './modules/products/product.router'
 import inventoryRouter from './modules/inventory/inventory.router'
 import quotationRouter from './modules/quotations/quotation.router'
 import cronRouter from './modules/cron/cron.router'
+import salaryRouter from './modules/salary/salary.router'
+import payrollRouter from './modules/payroll/payroll.router'
 
 const app = express()
 
@@ -63,6 +65,8 @@ app.use('/api/v1/products', productRouter)
 app.use('/api/v1/inventory', inventoryRouter)
 app.use('/api/v1/quotations', quotationRouter)
 app.use('/api/v1/cron', cronRouter)
+app.use('/api/v1/salary', salaryRouter)
+app.use('/api/v1/payroll', payrollRouter)
 
 app.use(errorHandler)
 

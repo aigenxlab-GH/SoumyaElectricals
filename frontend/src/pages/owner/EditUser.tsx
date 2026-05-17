@@ -2,6 +2,7 @@
 import { LoadingSpinner } from '../../common/LoadingSpinner'
 import { UserForm } from '../../components/users/UserForm'
 import { useUser, useUsers, useUpdateUser } from '../../hooks/useUsers'
+import { SalarySection } from '../../components/users/SalarySection'
 import type { UpdateUserDto } from '@soumya/shared'
 
 function toServerError(error: unknown): string | null {
@@ -42,6 +43,9 @@ export default function EditUser() {
           onCancel={() => navigate('/owner/users')}
         />
       </div>
+
+      {/* Salary section (owner-only, this page is already owner-only) */}
+      {user.role !== 'owner' && <SalarySection userId={user.id} />}
     </div>
   )
 }
