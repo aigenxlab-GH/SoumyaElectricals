@@ -1,10 +1,14 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState } from '../../common/EmptyState'
+import { ConfirmDialog } from '../../common/ConfirmDialog'
 import { Paginator } from '../../common/Paginator'
 import { usePagination } from '../../common/usePagination'
 import { useSorting } from '../../common/useSorting'
 import { SortableHeader } from '../../common/SortableHeader'
+import { useResetPassword } from '../../hooks/useUsers'
+import { useAuthStore } from '../../store/auth.store'
+import { parseApiError } from '../../utils/api-error'
 import type { User } from '../../types/models'
 import { formatDate } from '../../utils/date-utils'
 
@@ -25,6 +29,29 @@ function RoleBadge({ role }: { role: User['role'] }) {
 }
 
 export function UserTable({ users }: Props) {
+  const { user: currentUser } = useAuthStore()
+  const resetPassword = useResetPassword()
+  const [confirmReset, setConfirmReset] = useState<User | null>(null)
+  const [resetResult, setResetResult] = useState<{ ok: boolean; message: string } | null>(null)
+
+  function handleResetConfirm() {
+    if (!confirmReset) return
+    const target = confirmReset
+    resetPassword.mutate(target.id, {
+      onSuccess: (res) => {
+        setConfirmReset(null)
+        setResetResult({
+          ok: true,
+          message: `Password for ${res.full_name} (${res.employee_id}) has been reset to the default "${res.default_password}". Please inform the user — they will be forced to change it on next login.`,
+        })
+      },
+      onError: (err) => {
+        setConfirmReset(null)
+        setResetResult({ ok: false, message: parseApiError(err) ?? 'Failed to reset password' })
+      },
+    })
+  }
+
   const enriched = useMemo<EnrichedUser[]>(() => {
     const byId = Object.fromEntries(users.map((u) => [u.id, u]))
     const owner = users.find((u) => u.role === 'owner') ?? null
@@ -92,12 +119,24 @@ export function UserTable({ users }: Props) {
                 </td>
                 <td className="px-4 py-3.5 text-right">
                   {user.role !== 'owner' && (
-                    <Link
-                      to={`/owner/users/${user.id}/edit`}
-                      className="text-xs px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-50 font-medium transition-colors"
-                    >
-                      Edit
-                    </Link>
+                    <div className="inline-flex items-center gap-2">
+                      <Link
+                        to={`/owner/users/${user.id}/edit`}
+                        className="text-xs px-3 py-1.5 border border-slate-300 rounded-lg hover:bg-slate-50 font-medium transition-colors"
+                      >
+                        Edit
+                      </Link>
+                      {currentUser?.id !== user.id && (
+                        <button
+                          onClick={() => setConfirmReset(user)}
+                          disabled={resetPassword.isPending}
+                          title="Reset this user's password back to the default"
+                          className="text-xs px-3 py-1.5 border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 font-medium transition-colors disabled:opacity-50"
+                        >
+                          Reset Password
+                        </button>
+                      )}
+                    </div>
                   )}
                 </td>
               </tr>
@@ -109,6 +148,34 @@ export function UserTable({ users }: Props) {
         total={total} rangeStart={rangeStart} rangeEnd={rangeEnd}
         onPageChange={setPage} onPageSizeChange={setPageSize}
       />
+
+      {/* Reset Password — confirmation dialog */}
+      {confirmReset && (
+        <ConfirmDialog
+          title="Reset password?"
+          description={`Reset password for ${confirmReset.full_name} (${confirmReset.employee_id}) back to the default "12345678"? The user will be forced to change it on next login. You won't see the password they set afterwards.`}
+          confirmLabel="Yes, Reset Password"
+          isLoading={resetPassword.isPending}
+          onConfirm={handleResetConfirm}
+          onCancel={() => setConfirmReset(null)}
+        />
+      )}
+
+      {/* Reset result — auto-dismiss toast */}
+      {resetResult && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-md">
+          <div className={`rounded-lg shadow-lg border px-5 py-4 ${resetResult.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-red-50 border-red-200 text-red-900'}`}>
+            <div className="flex items-start gap-3">
+              <span className="text-lg leading-none mt-0.5">{resetResult.ok ? '✓' : '⚠'}</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold mb-0.5">{resetResult.ok ? 'Password reset' : 'Reset failed'}</p>
+                <p className="text-xs">{resetResult.message}</p>
+              </div>
+              <button onClick={() => setResetResult(null)} className="text-current opacity-50 hover:opacity-100 text-sm">✕</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

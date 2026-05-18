@@ -32,4 +32,9 @@ export const usersApi = {
     const { data } = await apiClient.patch<{ data: User }>(`/users/${id}`, dto)
     return data.data
   },
+
+  async resetPassword(id: string): Promise<{ employee_id: string; full_name: string; default_password: string }> {
+    const { data } = await apiClient.post<{ data: { employee_id: string; full_name: string; default_password: string } }>(`/users/${id}/reset-password`)
+    return data.data
+  },
 }

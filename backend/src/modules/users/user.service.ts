@@ -122,4 +122,33 @@ export const userService = {
 
     return userRepository.update(id, dto)
   },
+
+  /**
+   * Owner-only. Resets a user's password back to DEFAULT_PASSWORD ("12345678")
+   * and flips is_default_password=true so the user is forced to change on next login.
+   * Used when an employee forgets their password — owner doesn't see/store the new password.
+   */
+  async resetPassword(targetUserId: string, actorId: string) {
+    const target = await userRepository.findById(targetUserId)
+    if (!target) throw new AppError('NOT_FOUND', 'User not found', 404)
+    if (target.id === actorId) {
+      throw new AppError('FORBIDDEN', 'You cannot reset your own password here — use the Change Password page', 400)
+    }
+    if (target.role === 'owner') {
+      throw new AppError('FORBIDDEN', 'Cannot reset another owner\'s password', 400)
+    }
+
+    const { error: authError } = await supabase.auth.admin.updateUserById(target.id, {
+      password: DEFAULT_PASSWORD,
+    })
+    if (authError) throw new AppError('AUTH_UPDATE_FAILED', authError.message, 500)
+
+    const { error: dbError } = await supabase
+      .from('users')
+      .update({ is_default_password: true, updated_at: new Date().toISOString() })
+      .eq('id', target.id)
+    if (dbError) throw new AppError('DB_ERROR', dbError.message, 500)
+
+    return { employee_id: target.employee_id, full_name: target.full_name, default_password: DEFAULT_PASSWORD }
+  },
 }

@@ -41,6 +41,12 @@ export function useCreateUser() {
   })
 }
 
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (userId: string) => usersApi.resetPassword(userId),
+  })
+}
+
 export function useUpdateUser(id: string) {
   const qc = useQueryClient()
   return useMutation({

@@ -44,4 +44,10 @@ export const userController = {
       res.json(ok(await userService.update(req.params.id, req.body)))
     } catch (err) { next(err) }
   },
+
+  async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.json(ok(await userService.resetPassword(req.params.id, req.user!.id)))
+    } catch (err) { next(err) }
+  },
 }
