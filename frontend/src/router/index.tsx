@@ -62,10 +62,12 @@ export const router = createBrowserRouter([
             children: [
               { path: '/approvals/timecards', element: <TimecardApproval /> },
               { path: '/approvals/leaves', element: <LeaveApproval /> },
-              { path: '/payroll', element: <PayrollList /> },
-              { path: '/payroll/:id', element: <PayrollDetail /> },
             ],
           },
+          // Payroll is available to all authenticated roles — the page renders a
+          // self-view for employees and a roster + bulk view for owner/manager.
+          { path: '/payroll', element: <PayrollList /> },
+          { path: '/payroll/:id', element: <PayrollDetail /> },
           {
             element: <RoleRoute allowedRoles={['owner']} />,
             children: [

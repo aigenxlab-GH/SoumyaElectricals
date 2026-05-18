@@ -14,6 +14,24 @@ export const payrollApi = {
     })
     return data.data
   },
+  async history(userId: string, limit = 12): Promise<Payroll[]> {
+    const { data } = await apiClient.get<{ data: Payroll[] }>('/payroll/history', {
+      params: { user_id: userId, limit },
+    })
+    return data.data
+  },
+  async bulkGenerate(year: number, month: number): Promise<{
+    success: { user_id: string; employee_id: string; full_name: string; payroll_id: string }[]
+    failed:  { user_id: string; employee_id: string; full_name: string; reason: string }[]
+  }> {
+    const { data } = await apiClient.post<{
+      data: {
+        success: { user_id: string; employee_id: string; full_name: string; payroll_id: string }[]
+        failed:  { user_id: string; employee_id: string; full_name: string; reason: string }[]
+      }
+    }>('/payroll/bulk-generate', { period_year: year, period_month: month })
+    return data.data
+  },
   async getById(id: string): Promise<Payroll> {
     const { data } = await apiClient.get<{ data: Payroll }>(`/payroll/${id}`)
     return data.data

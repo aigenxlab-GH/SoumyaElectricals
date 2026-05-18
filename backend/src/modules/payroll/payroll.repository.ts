@@ -23,6 +23,19 @@ export const payrollRepository = {
     return data ?? null
   },
 
+  /** Last N payrolls for a single user, newest first. */
+  async listForUser(userId: string, limit = 12): Promise<Payroll[]> {
+    const { data, error } = await supabase
+      .from('payrolls')
+      .select('*')
+      .eq('user_id', userId)
+      .order('period_year', { ascending: false })
+      .order('period_month', { ascending: false })
+      .limit(limit)
+    if (error) throw new AppError('DB_ERROR', error.message, 500)
+    return data ?? []
+  },
+
   async listForPeriod(filter: {
     year: number; month: number; userIds?: string[]
   }): Promise<Payroll[]> {

@@ -58,14 +58,30 @@ async function getScopeUserIds(actor: AuthUser): Promise<string[] | undefined> {
   return []
 }
 
-async function assertScopeAccess(actor: AuthUser, targetUserId: string): Promise<void> {
+/** Read access — employee can view own payslip; manager/owner per scope. */
+async function assertReadAccess(actor: AuthUser, targetUserId: string): Promise<void> {
   if (actor.role === 'employee') {
-    throw new AppError('FORBIDDEN', 'Employees cannot access payroll', 403)
+    if (actor.id !== targetUserId) {
+      throw new AppError('FORBIDDEN', 'You can only view your own payroll', 403)
+    }
+    return
   }
   const ids = await getScopeUserIds(actor)
   if (ids === undefined) return
   if (!ids.includes(targetUserId)) {
     throw new AppError('FORBIDDEN', 'You are not authorised to view this user\'s payroll', 403)
+  }
+}
+
+/** Write access — employees never; manager/owner per scope. */
+async function assertWriteAccess(actor: AuthUser, targetUserId: string): Promise<void> {
+  if (actor.role === 'employee') {
+    throw new AppError('FORBIDDEN', 'Employees cannot modify payroll', 403)
+  }
+  const ids = await getScopeUserIds(actor)
+  if (ids === undefined) return
+  if (!ids.includes(targetUserId)) {
+    throw new AppError('FORBIDDEN', 'You are not authorised to modify this user\'s payroll', 403)
   }
 }
 
@@ -112,19 +128,25 @@ export const payrollService = {
 
   /** Look up the saved payroll for a specific (user, year, month). Returns null if not generated yet. */
   async lookup(actor: AuthUser, userId: string, year: number, month: number): Promise<Payroll | null> {
-    await assertScopeAccess(actor, userId)
+    await assertReadAccess(actor, userId)
     return payrollRepository.findByUserAndPeriod(userId, year, month)
+  },
+
+  /** Last N payrolls for a user, newest first. */
+  async history(actor: AuthUser, userId: string, limit = 12): Promise<Payroll[]> {
+    await assertReadAccess(actor, userId)
+    return payrollRepository.listForUser(userId, limit)
   },
 
   async detail(actor: AuthUser, id: string): Promise<Payroll> {
     const p = await payrollRepository.findById(id)
     if (!p) throw new AppError('NOT_FOUND', 'Payroll not found', 404)
-    await assertScopeAccess(actor, p.user_id)
+    await assertReadAccess(actor, p.user_id)
     return p
   },
 
   async generate(actor: AuthUser, dto: GeneratePayrollDto): Promise<Payroll> {
-    await assertScopeAccess(actor, dto.user_id)
+    await assertWriteAccess(actor, dto.user_id)
 
     const employee = await userRepository.findById(dto.user_id)
     if (!employee) throw new AppError('NOT_FOUND', 'Employee not found', 404)
@@ -209,10 +231,46 @@ export const payrollService = {
     return result
   },
 
+  /**
+   * Generate payroll for every user in actor's scope for a given period.
+   * Returns a per-user result list — does not fail the whole batch if one user errors.
+   */
+  async bulkGenerate(actor: AuthUser, year: number, month: number): Promise<{
+    success: { user_id: string; employee_id: string; full_name: string; payroll_id: string }[]
+    failed:  { user_id: string; employee_id: string; full_name: string; reason: string }[]
+  }> {
+    if (actor.role === 'employee') {
+      throw new AppError('FORBIDDEN', 'Employees cannot generate payroll', 403)
+    }
+    // Build the same roster as list()
+    let users: User[]
+    if (actor.role === 'owner') {
+      users = await userRepository.list()
+    } else {
+      users = await userRepository.listReportableUsers(actor.id)
+    }
+    users = users.filter((u) => u.is_active && u.role !== 'owner')
+    if (actor.role === 'manager') users = users.filter((u) => u.id !== actor.id)
+
+    const success: { user_id: string; employee_id: string; full_name: string; payroll_id: string }[] = []
+    const failed:  { user_id: string; employee_id: string; full_name: string; reason: string }[] = []
+
+    for (const u of users) {
+      try {
+        const p = await this.generate(actor, { user_id: u.id, period_year: year, period_month: month })
+        success.push({ user_id: u.id, employee_id: u.employee_id, full_name: u.full_name, payroll_id: p.id })
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : 'unknown error'
+        failed.push({ user_id: u.id, employee_id: u.employee_id, full_name: u.full_name, reason })
+      }
+    }
+    return { success, failed }
+  },
+
   async process(actor: AuthUser, id: string, dto: ProcessPayrollDto): Promise<Payroll> {
     const existing = await payrollRepository.findById(id)
     if (!existing) throw new AppError('NOT_FOUND', 'Payroll not found', 404)
-    await assertScopeAccess(actor, existing.user_id)
+    await assertWriteAccess(actor, existing.user_id)
 
     const next: 'draft' | 'finalised' | 'paid' =
       dto.action === 'finalise'   ? 'finalised' :
@@ -225,7 +283,7 @@ export const payrollService = {
   async remove(actor: AuthUser, id: string): Promise<void> {
     const existing = await payrollRepository.findById(id)
     if (!existing) throw new AppError('NOT_FOUND', 'Payroll not found', 404)
-    await assertScopeAccess(actor, existing.user_id)
+    await assertWriteAccess(actor, existing.user_id)
     if (existing.status !== 'draft') {
       throw new AppError('INVALID_STATUS', 'Only draft payrolls can be deleted', 400)
     }

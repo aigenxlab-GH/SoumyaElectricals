@@ -15,6 +15,7 @@ export const SIDEBAR_NAV: Record<Role, NavItem[]> = {
     { label: 'My Timecard', path: '/my-timecard' },
     { label: 'My Leave', path: '/my-leave' },
     { label: 'My Calendar', path: '/my-calendar' },
+    { label: 'My Payslips', path: '/payroll' },
   ],
   manager: [
     { label: 'Dashboard', path: '/dashboard' },

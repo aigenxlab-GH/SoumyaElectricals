@@ -10,14 +10,18 @@ const router = Router()
 
 router.use(authenticate, forcePasswordChange)
 
-// Payroll is owner + manager only — employee blocked at service layer too.
-const ownerOrManager = roleGuard('owner', 'manager')
+// Write endpoints — owner + manager only (service also blocks employees defensively)
+const writers = roleGuard('owner', 'manager')
 
-router.get('/',           ownerOrManager, payrollController.list)
-router.get('/lookup',     ownerOrManager, payrollController.lookup)
-router.get('/:id',        ownerOrManager, payrollController.getById)
-router.post('/generate',  ownerOrManager, validate(GeneratePayrollSchema), payrollController.generate)
-router.post('/:id/process', ownerOrManager, validate(ProcessPayrollSchema), payrollController.process)
-router.delete('/:id',     ownerOrManager, payrollController.remove)
+// Read endpoints — open to all authenticated roles; service enforces own-data for employees
+router.get('/',           writers, payrollController.list)           // roster (writers only)
+router.get('/lookup',              payrollController.lookup)          // any role; service does own-id check
+router.get('/history',             payrollController.history)         // any role; service does own-id check
+router.get('/:id',                 payrollController.getById)         // any role; service does own-id check
+
+router.post('/generate',        writers, validate(GeneratePayrollSchema), payrollController.generate)
+router.post('/bulk-generate',   writers, payrollController.bulkGenerate)
+router.post('/:id/process',     writers, validate(ProcessPayrollSchema), payrollController.process)
+router.delete('/:id',           writers, payrollController.remove)
 
 export default router

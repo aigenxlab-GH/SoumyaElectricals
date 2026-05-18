@@ -9,6 +9,22 @@ const keys = {
   detail: (id: string) => ['payroll', 'detail', id] as const,
 }
 
+export function usePayrollHistory(userId: string, limit = 12, opts: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: ['payroll', 'history', userId, limit] as const,
+    queryFn:  () => payrollApi.history(userId, limit),
+    enabled:  (opts.enabled ?? true) && !!userId,
+  })
+}
+
+export function useBulkGenerate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ year, month }: { year: number; month: number }) => payrollApi.bulkGenerate(year, month),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payroll'] }),
+  })
+}
+
 export function usePayrollLookup(userId: string, year: number, month: number, opts: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: keys.lookup(userId, year, month),

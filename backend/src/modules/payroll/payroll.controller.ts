@@ -32,6 +32,28 @@ export const payrollController = {
     } catch (err) { next(err) }
   },
 
+  async history(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = String(req.query.user_id ?? '')
+      const limit  = req.query.limit ? Number(req.query.limit) : 12
+      if (!userId) {
+        return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'user_id is required' } })
+      }
+      res.json(ok(await payrollService.history(req.user!, userId, limit)))
+    } catch (err) { next(err) }
+  },
+
+  async bulkGenerate(req: Request, res: Response, next: NextFunction) {
+    try {
+      const year  = Number(req.body?.period_year)
+      const month = Number(req.body?.period_month)
+      if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+        return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'period_year and period_month required' } })
+      }
+      res.json(ok(await payrollService.bulkGenerate(req.user!, year, month)))
+    } catch (err) { next(err) }
+  },
+
   async generate(req: Request, res: Response, next: NextFunction) {
     try {
       res.json(ok(await payrollService.generate(req.user!, req.body)))
