@@ -65,7 +65,9 @@
       "Bash(git push *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(node scripts/reset-app-data.mjs)"
+      "Bash(node scripts/reset-app-data.mjs)",
+      "Bash(git commit *)",
+      "Bash(sleep 8 && echo \"=== BACKEND ===\" && cat /c/Users/Admin/AppData/Local/Temp/claude/C--AIGenXLab-Projects-Soumya-Electricals-SoumyaElectricals/813fa497-dd60-490d-92c9-e1f13462ebc4/tasks/bcx72ywz7.output 2>&1 | tail -15 && echo \"=== FRONTEND ===\" && cat /c/Users/Admin/AppData/Local/Temp/claude/C--AIGenXLab-Projects-Soumya-Electricals-SoumyaElectricals/813fa497-dd60-490d-92c9-e1f13462ebc4/tasks/biy7kxp1u.output 2>&1 | tail -10)"
     ]
   }
 }

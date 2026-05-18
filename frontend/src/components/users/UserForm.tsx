@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import type { UseFormReturn } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -18,9 +19,12 @@ type EditProps = {
   mode: 'edit'
   editing: User
   managers: User[]
+  /** Current monthly salary for this user — used to pre-fill the salary input. */
+  currentSalary: number | null
   isPending: boolean
   serverError: string | null
-  onSubmit: (dto: UpdateUserDto) => void
+  /** Called with the user DTO and (optionally) a new salary to record. */
+  onSubmit: (dto: UpdateUserDto, newSalary?: number) => void
   onCancel: () => void
 }
 type Props = CreateProps | EditProps
@@ -58,12 +62,16 @@ export function UserForm(props: Props) {
   const editForm = useForm<UpdateUserDto>({
     resolver: zodResolver(UpdateUserSchema),
     defaultValues: props.mode === 'edit' ? {
-      full_name: props.editing.full_name,
-      role: props.editing.role === 'owner' ? 'manager' : props.editing.role,
-      sex: props.editing.sex,
+      full_name:     props.editing.full_name,
+      role:          props.editing.role === 'owner' ? 'manager' : props.editing.role,
+      sex:           props.editing.sex,
       date_of_birth: props.editing.date_of_birth,
-      manager_id: props.editing.manager_id,
-      is_active: props.editing.is_active,
+      manager_id:    props.editing.manager_id,
+      is_active:     props.editing.is_active,
+      phone:         props.editing.phone ?? '',
+      address:       props.editing.address ?? '',
+      email:         props.editing.email  ?? '',
+      aadhaar:       (props.editing as User & { aadhaar?: string }).aadhaar ?? '',
     } : undefined,
   })
 
@@ -72,10 +80,43 @@ export function UserForm(props: Props) {
   const { register, handleSubmit, watch, formState: { errors, isDirty } } = form
   const role = watch('role') as string | undefined
 
+  // Salary input — managed locally for edit mode (it's NOT part of UpdateUserDto since salary lives in salary_history)
+  const [editSalary, setEditSalary] = useState<string>(
+    props.mode === 'edit' && props.currentSalary != null ? String(props.currentSalary) : ''
+  )
+  const [salaryDirty, setSalaryDirty] = useState(false)
+  useEffect(() => {
+    if (props.mode === 'edit') {
+      setEditSalary(props.currentSalary != null ? String(props.currentSalary) : '')
+      setSalaryDirty(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.mode === 'edit' ? props.currentSalary : null])
+
+  const [salaryError, setSalaryError] = useState<string | null>(null)
+
   function onSubmit(values: CreateUserDto | UpdateUserDto) {
-    if (isCreate) props.onSubmit(values as CreateUserDto)
-    else props.onSubmit(values as UpdateUserDto)
+    setSalaryError(null)
+    if (isCreate) {
+      props.onSubmit(values as CreateUserDto)
+      return
+    }
+    // Edit: validate salary if provided / dirty
+    const editProps = props as EditProps
+    let newSalary: number | undefined
+    if (salaryDirty) {
+      const n = editSalary.trim() === '' ? NaN : Number(editSalary)
+      if (isNaN(n) || n <= 0) {
+        setSalaryError('Monthly salary must be greater than 0')
+        return
+      }
+      // Only send if actually different from current
+      if (n !== editProps.currentSalary) newSalary = n
+    }
+    editProps.onSubmit(values as UpdateUserDto, newSalary)
   }
+
+  const canSubmit = isCreate ? isDirty : (isDirty || salaryDirty)
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -127,7 +168,7 @@ export function UserForm(props: Props) {
         )}
       </div>
 
-      {/* ── Manager (only for Employee role) ── */}
+      {/* ── Manager (mandatory for Employee role) ── */}
       {role === 'employee' && (
         <Field label="Manager" required error={errors.manager_id?.message}>
           <select {...register('manager_id')} className={inputCls}>
@@ -139,47 +180,64 @@ export function UserForm(props: Props) {
         </Field>
       )}
 
-      {/* ── Aadhaar (create only) ── */}
-      {isCreate && (
-        <Field label="Aadhaar (12 digits)" required error={createForm.formState.errors.aadhaar?.message}>
-          <input {...createForm.register('aadhaar')} maxLength={12} className={inputCls}
-            placeholder="123456789012" inputMode="numeric" />
-        </Field>
-      )}
+      {/* ── Aadhaar — visible in both modes ── */}
+      <Field label="Aadhaar (12 digits)" required error={
+        isCreate
+          ? createForm.formState.errors.aadhaar?.message
+          : editForm.formState.errors.aadhaar?.message
+      }>
+        <input {...register('aadhaar')} maxLength={12} className={inputCls}
+          placeholder="123456789012" inputMode="numeric" />
+      </Field>
 
       {/* ── Phone ── */}
-      {isCreate && (
-        <Field label="Phone Number" required error={createForm.formState.errors.phone?.message}>
-          <input {...createForm.register('phone')} className={inputCls}
-            placeholder="e.g. 9876543210 or +91 9876543210" inputMode="tel" maxLength={15} />
-          <p className="mt-1 text-xs text-gray-400">10-digit Indian mobile number starting with 6, 7, 8, or 9</p>
-        </Field>
-      )}
+      <Field label="Phone Number" required error={
+        isCreate
+          ? createForm.formState.errors.phone?.message
+          : editForm.formState.errors.phone?.message
+      }>
+        <input {...register('phone')} className={inputCls}
+          placeholder="e.g. 9876543210 or +91 9876543210" inputMode="tel" maxLength={15} />
+        <p className="mt-1 text-xs text-gray-400">10-digit Indian mobile starting with 6, 7, 8, or 9</p>
+      </Field>
 
       {/* ── Address ── */}
-      {isCreate && (
-        <Field label="Address" required error={createForm.formState.errors.address?.message}>
-          <textarea {...createForm.register('address')} rows={3} className={inputCls}
-            placeholder="Full residential address" />
-        </Field>
-      )}
+      <Field label="Address" required error={
+        isCreate
+          ? createForm.formState.errors.address?.message
+          : editForm.formState.errors.address?.message
+      }>
+        <textarea {...register('address')} rows={3} className={inputCls}
+          placeholder="Full residential address" />
+      </Field>
 
       {/* ── Email (optional) ── */}
-      {isCreate && (
-        <Field label="Email (optional)" error={createForm.formState.errors.email?.message}>
-          <input {...createForm.register('email')} type="email" className={inputCls}
-            placeholder="e.g. employee@example.com" />
-        </Field>
-      )}
+      <Field label="Email (optional)" error={
+        isCreate
+          ? createForm.formState.errors.email?.message
+          : editForm.formState.errors.email?.message
+      }>
+        <input {...register('email')} type="email" className={inputCls}
+          placeholder="e.g. employee@example.com" />
+      </Field>
 
-      {/* ── Monthly Salary (create only — owner can change later via Edit User) ── */}
-      {isCreate && (
-        <Field label="Monthly Salary (₹)" error={createForm.formState.errors.monthly_salary?.message}>
+      {/* ── Monthly Salary (both modes, same UI) ── */}
+      {isCreate ? (
+        <Field label="Monthly Salary (₹)" required error={createForm.formState.errors.monthly_salary?.message}>
           <input
             {...createForm.register('monthly_salary', { setValueAs: (v) => v === '' ? undefined : Number(v) })}
             type="number" step="0.01" min={1}
             className={inputCls} placeholder="e.g. 25000" />
-          <p className="text-xs text-gray-400 mt-1">Used to generate payroll. Effective from the joining date you set above. You can change this later from Edit User.</p>
+          <p className="text-xs text-gray-400 mt-1">Used to generate payroll. Effective from the joining date.</p>
+        </Field>
+      ) : (
+        <Field label="Monthly Salary (₹)" required error={salaryError ?? undefined}>
+          <input
+            type="number" step="0.01" min={1}
+            value={editSalary}
+            onChange={(e) => { setEditSalary(e.target.value); setSalaryDirty(true); setSalaryError(null) }}
+            className={inputCls} placeholder="e.g. 25000" />
+          <p className="text-xs text-gray-400 mt-1">Changing this records a new salary effective from today; past values are kept in history.</p>
         </Field>
       )}
 
@@ -214,8 +272,8 @@ export function UserForm(props: Props) {
         <button type="button" onClick={props.onCancel} className="btn-secondary px-4 py-2">
           Cancel
         </button>
-        <button type="submit" disabled={props.isPending || !isDirty}
-          title={!isDirty ? 'No changes to save' : undefined}
+        <button type="submit" disabled={props.isPending || !canSubmit}
+          title={!canSubmit ? 'No changes to save' : undefined}
           className="btn-primary px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed">
           {props.isPending ? 'Saving…' : isCreate ? 'Create User' : 'Save Changes'}
         </button>
