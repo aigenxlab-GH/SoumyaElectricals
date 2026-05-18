@@ -5,7 +5,16 @@ import type { GeneratePayrollDto, ProcessPayrollDto } from '@soumya/shared'
 const keys = {
   all:    () => ['payroll'] as const,
   list:   (y: number, m: number) => ['payroll', 'list', y, m] as const,
+  lookup: (userId: string, y: number, m: number) => ['payroll', 'lookup', userId, y, m] as const,
   detail: (id: string) => ['payroll', 'detail', id] as const,
+}
+
+export function usePayrollLookup(userId: string, year: number, month: number, opts: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: keys.lookup(userId, year, month),
+    queryFn:  () => payrollApi.lookup(userId, year, month),
+    enabled:  (opts.enabled ?? true) && !!userId,
+  })
 }
 
 export function usePayrollList(year: number, month: number, opts: { enabled?: boolean } = {}) {

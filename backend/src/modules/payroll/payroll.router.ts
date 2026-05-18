@@ -14,6 +14,7 @@ router.use(authenticate, forcePasswordChange)
 const ownerOrManager = roleGuard('owner', 'manager')
 
 router.get('/',           ownerOrManager, payrollController.list)
+router.get('/lookup',     ownerOrManager, payrollController.lookup)
 router.get('/:id',        ownerOrManager, payrollController.getById)
 router.post('/generate',  ownerOrManager, validate(GeneratePayrollSchema), payrollController.generate)
 router.post('/:id/process', ownerOrManager, validate(ProcessPayrollSchema), payrollController.process)

@@ -12,17 +12,13 @@ import type {
 
 function pad2(n: number): string { return String(n).padStart(2, '0') }
 
-/** Cycle for "May 2026" is Apr 26 – May 25. Year/month always refer to cycle end. */
+/** Calendar month. "May 2026" → 2026-05-01 to 2026-05-31. */
 export function computePeriod(year: number, month: number): { start: string; end: string } {
-  const endY  = year
-  const endM  = month
-  let startY = year
-  let startM = month - 1
-  if (startM === 0) { startM = 12; startY = year - 1 }
-  return {
-    start: `${startY}-${pad2(startM)}-26`,
-    end:   `${endY}-${pad2(endM)}-25`,
-  }
+  const start = `${year}-${pad2(month)}-01`
+  // Last day of the month: day 0 of next month
+  const lastDate = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const end = `${year}-${pad2(month)}-${pad2(lastDate)}`
+  return { start, end }
 }
 
 function dateRangeAsArray(start: string, end: string): string[] {
@@ -112,6 +108,12 @@ export const payrollService = {
       current_salary: salaries[u.id] ?? null,
       payroll:        payrollByUser[u.id] ?? null,
     }))
+  },
+
+  /** Look up the saved payroll for a specific (user, year, month). Returns null if not generated yet. */
+  async lookup(actor: AuthUser, userId: string, year: number, month: number): Promise<Payroll | null> {
+    await assertScopeAccess(actor, userId)
+    return payrollRepository.findByUserAndPeriod(userId, year, month)
   },
 
   async detail(actor: AuthUser, id: string): Promise<Payroll> {

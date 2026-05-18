@@ -14,6 +14,18 @@ export const payrollController = {
     } catch (err) { next(err) }
   },
 
+  async lookup(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = String(req.query.user_id ?? '')
+      const year   = Number(req.query.year)
+      const month  = Number(req.query.month)
+      if (!userId || !Number.isInteger(year) || !Number.isInteger(month)) {
+        return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'user_id, year, month required' } })
+      }
+      res.json(ok(await payrollService.lookup(req.user!, userId, year, month)))
+    } catch (err) { next(err) }
+  },
+
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
       res.json(ok(await payrollService.detail(req.user!, req.params.id)))

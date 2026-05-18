@@ -8,6 +8,12 @@ export const payrollApi = {
     const { data } = await apiClient.get<{ data: PayrollListRow[] }>('/payroll', { params: { year, month } })
     return data.data
   },
+  async lookup(userId: string, year: number, month: number): Promise<Payroll | null> {
+    const { data } = await apiClient.get<{ data: Payroll | null }>('/payroll/lookup', {
+      params: { user_id: userId, year, month },
+    })
+    return data.data
+  },
   async getById(id: string): Promise<Payroll> {
     const { data } = await apiClient.get<{ data: Payroll }>(`/payroll/${id}`)
     return data.data

@@ -1,15 +1,17 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { LoadingSpinner } from '../../common/LoadingSpinner'
-import { EmptyState } from '../../common/EmptyState'
-import { usePayrollList, useGeneratePayroll } from '../../hooks/usePayrolls'
+import { useUsers, useReportableUsers } from '../../hooks/useUsers'
+import { useAuthStore } from '../../store/auth.store'
+import { useCurrentSalary } from '../../hooks/useSalary'
+import { usePayrollLookup, useGeneratePayroll } from '../../hooks/usePayrolls'
 import { parseApiError } from '../../utils/api-error'
-import type { PayrollListRow, PayrollStatus } from '@soumya/shared'
+import type { PayrollStatus } from '@soumya/shared'
 
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+const MONTH_LONG  = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const fmtMoney = (n: number | null | undefined) =>
   n === null || n === undefined ? '—' : `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 function StatusBadge({ status }: { status: PayrollStatus }) {
   const m: Record<PayrollStatus, string> = {
@@ -20,111 +22,157 @@ function StatusBadge({ status }: { status: PayrollStatus }) {
   return <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${m[status]}`}>{status}</span>
 }
 
-export default function PayrollList() {
+/** Build dropdown of last 12 months ending at today, format "May26". */
+function buildMonthOptions(): { value: string; label: string; year: number; month: number }[] {
   const now = new Date()
-  const [year, setYear]   = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth() + 1)
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [busyId, setBusyId] = useState<string | null>(null)
+  const opts: { value: string; label: string; year: number; month: number }[] = []
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const y = d.getFullYear()
+    const m = d.getMonth() + 1   // 1-12
+    opts.push({
+      value: `${y}-${m}`,
+      label: `${MONTH_SHORT[m - 1]}${String(y).slice(2)}`,
+      year:  y,
+      month: m,
+    })
+  }
+  return opts
+}
 
-  const { data: rows = [], isLoading, isFetching } = usePayrollList(year, month)
+export default function PayrollList() {
+  const { user } = useAuthStore()
+  const navigate = useNavigate()
+  const isOwner   = user?.role === 'owner'
+  const isManager = user?.role === 'manager'
+
+  // Roster — owner sees all active non-owner users; manager sees their team
+  const { data: allUsers = [],   isLoading: loadingAll }   = useUsers({ enabled: isOwner })
+  const { data: teamUsers = [],  isLoading: loadingTeam }  = useReportableUsers({ enabled: isManager })
+  const employees = useMemo(() => {
+    const list = isOwner ? allUsers : teamUsers
+    return list.filter((u) => u.is_active && u.role !== 'owner')
+  }, [isOwner, allUsers, teamUsers])
+
+  const monthOptions = useMemo(buildMonthOptions, [])
+
+  const [employeeId, setEmployeeId] = useState<string>('')
+  const [monthKey, setMonthKey] = useState<string>(monthOptions[0].value)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const selectedMonth = monthOptions.find((m) => m.value === monthKey) ?? monthOptions[0]
+  const selectedEmployee = employees.find((u) => u.id === employeeId)
+
+  const { data: salary } = useCurrentSalary(employeeId, { enabled: isOwner && !!employeeId })
+
+  const lookup   = usePayrollLookup(employeeId, selectedMonth.year, selectedMonth.month, { enabled: !!employeeId })
   const generate = useGeneratePayroll()
 
-  // Period preview (Apr 26 – May 25)
-  const { start, end } = useMemo(() => {
-    const pad = (n: number) => String(n).padStart(2, '0')
-    let sy = year, sm = month - 1
-    if (sm === 0) { sm = 12; sy = year - 1 }
-    return { start: `${sy}-${pad(sm)}-26`, end: `${year}-${pad(month)}-25` }
-  }, [year, month])
-
-  function handleGenerate(row: PayrollListRow) {
+  function handleGetPayroll() {
+    if (!employeeId) return
     setActionError(null)
-    if (row.current_salary === null) {
-      setActionError(`Cannot generate — ${row.full_name} (${row.employee_id}) has no salary set. Open Edit User to set it.`)
-      return
-    }
-    setBusyId(row.user_id)
     generate.mutate(
-      { user_id: row.user_id, period_year: year, period_month: month },
+      { user_id: employeeId, period_year: selectedMonth.year, period_month: selectedMonth.month },
       {
-        onSuccess: () => setBusyId(null),
-        onError:   (err) => { setBusyId(null); setActionError(parseApiError(err)) },
+        onSuccess: (p) => navigate(`/payroll/${p.id}`),
+        onError:   (err) => setActionError(parseApiError(err)),
       }
     )
   }
 
-  const years = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1]
+  const loadingRoster = (isOwner && loadingAll) || (isManager && loadingTeam)
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-gray-900">Payroll</h1>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Period:</span>
-          <select value={month} onChange={(e) => setMonth(Number(e.target.value))}
-            className="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-          </select>
-          <select value={year} onChange={(e) => setYear(Number(e.target.value))}
-            className="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            {years.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <span className="text-xs text-gray-400 ml-1">{start.slice(8)} {MONTHS[parseInt(start.slice(5,7))-1]} – {end.slice(8)} {MONTHS[month-1]}</span>
-        </div>
-      </div>
+    <div className="space-y-6 max-w-3xl">
+      <h1 className="text-xl font-semibold text-gray-900">Payroll</h1>
 
-      {actionError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm flex items-center justify-between">
-          <span>⚠ {actionError}</span>
-          <button onClick={() => setActionError(null)} className="text-red-400 hover:text-red-600">✕</button>
-        </div>
-      )}
+      <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-5">
+        <p className="text-sm text-gray-500">Pick an employee and a month, then click <strong>Get Payroll</strong>. The system will compute fresh values from attendance, leaves and overtime for that period.</p>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        {isLoading ? <div className="p-6"><LoadingSpinner /></div>
-          : rows.length === 0 ? <EmptyState message="No users in your scope." />
-          : (
-          <div className={`overflow-x-auto transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  {['Emp ID','Name','Role','Monthly Salary','Net Pay','Status','Action'].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {rows.map((row) => (
-                  <tr key={row.user_id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-xs">{row.employee_id}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900">{row.full_name}</td>
-                    <td className="px-4 py-3 text-gray-600 capitalize">{row.role}</td>
-                    <td className="px-4 py-3 text-gray-800">{fmtMoney(row.current_salary)}</td>
-                    <td className="px-4 py-3 text-gray-800 font-medium">{row.payroll ? fmtMoney(row.payroll.net_pay) : '—'}</td>
-                    <td className="px-4 py-3">
-                      {row.payroll ? <StatusBadge status={row.payroll.status} /> : <span className="text-xs text-gray-400">Not generated</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => handleGenerate(row)}
-                          disabled={busyId === row.user_id || row.current_salary === null}
-                          title={row.current_salary === null ? 'Set salary first via Edit User' : 'Compute / re-compute payroll'}
-                          className="text-xs text-blue-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline">
-                          {row.payroll ? (busyId === row.user_id ? 'Recomputing…' : 'Re-Generate') : (busyId === row.user_id ? 'Generating…' : 'Generate')}
-                        </button>
-                        {row.payroll && (
-                          <Link to={`/payroll/${row.payroll.id}`} className="text-xs text-blue-600 hover:underline">View / PDF</Link>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {actionError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm flex items-center justify-between">
+            <span>⚠ {actionError}</span>
+            <button onClick={() => setActionError(null)} className="text-red-400 hover:text-red-600">✕</button>
           </div>
         )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Employee */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wider">Employee</label>
+            {loadingRoster ? <LoadingSpinner /> : (
+              <select
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">— Select —</option>
+                {employees.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.full_name} ({u.employee_id})
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Month */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wider">Month</label>
+            <select
+              value={monthKey}
+              onChange={(e) => setMonthKey(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {monthOptions.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+            <p className="text-xs text-gray-400 mt-1">{MONTH_LONG[selectedMonth.month - 1]} {selectedMonth.year} — 1st to last day</p>
+          </div>
+        </div>
+
+        {/* Salary preview (owner only) */}
+        {isOwner && selectedEmployee && (
+          <div className="text-xs text-gray-500">
+            Current salary for <strong className="text-gray-800">{selectedEmployee.full_name}</strong>: {fmtMoney(salary?.monthly_salary)}{' '}
+            {(!salary || salary.monthly_salary === null) && (
+              <Link to={`/owner/users/${selectedEmployee.id}/edit`} className="text-blue-600 hover:underline ml-1">Set salary →</Link>
+            )}
+          </div>
+        )}
+
+        {/* Existing payroll for this (user, month) */}
+        {employeeId && lookup.data && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm flex items-center justify-between">
+            <div>
+              <div className="text-blue-900 font-medium">
+                Payroll already exists for {selectedMonth.label}{'  '}
+                <StatusBadge status={lookup.data.status} />
+              </div>
+              <p className="text-xs text-blue-700 mt-0.5">Net Pay: <strong>{fmtMoney(lookup.data.net_pay)}</strong></p>
+            </div>
+            <div className="flex gap-2">
+              <Link to={`/payroll/${lookup.data.id}`} className="text-xs px-3 py-1.5 border border-blue-300 text-blue-700 rounded hover:bg-blue-100">View / PDF</Link>
+              <button
+                onClick={handleGetPayroll}
+                disabled={generate.isPending}
+                className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+              >
+                {generate.isPending ? 'Recomputing…' : 'Re-Compute'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Action */}
+        <div className="flex justify-end">
+          <button
+            onClick={handleGetPayroll}
+            disabled={!employeeId || generate.isPending}
+            className="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {generate.isPending ? 'Generating…' : (lookup.data ? 'Re-Generate Payroll' : 'Get Payroll')}
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -172,6 +172,17 @@ export function UserForm(props: Props) {
         </Field>
       )}
 
+      {/* ── Monthly Salary (create only — owner can change later via Edit User) ── */}
+      {isCreate && (
+        <Field label="Monthly Salary (₹)" error={createForm.formState.errors.monthly_salary?.message}>
+          <input
+            {...createForm.register('monthly_salary', { setValueAs: (v) => v === '' ? undefined : Number(v) })}
+            type="number" step="0.01" min={1}
+            className={inputCls} placeholder="e.g. 25000" />
+          <p className="text-xs text-gray-400 mt-1">Used to generate payroll. Effective from the joining date you set above. You can change this later from Edit User.</p>
+        </Field>
+      )}
+
       {/* ── Account Status toggle (edit only) ── */}
       {!isCreate && (
         <div>

@@ -91,6 +91,17 @@ export const userService = {
       .from('leave_balance')
       .insert({ user_id: user.id, total_credited: monthlyCredit, used: 0, remaining: monthlyCredit })
 
+    // Optionally seed salary_history if monthly_salary was provided at creation
+    if (dto.monthly_salary && dto.monthly_salary > 0) {
+      await supabase.from('salary_history').insert({
+        user_id:        user.id,
+        monthly_salary: dto.monthly_salary,
+        effective_from: dto.date_of_joining,
+        note:           'Set at user creation',
+        created_by:     creatorId,
+      })
+    }
+
     return user
   },
 

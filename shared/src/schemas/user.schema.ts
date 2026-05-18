@@ -41,6 +41,11 @@ export const CreateUserSchema = z.object({
     (v) => (v === '' ? undefined : v),
     z.string().email('Invalid email format').optional()
   ),
+  // Optional at creation — owner can set later via Edit User
+  monthly_salary: z.preprocess(
+    (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
+    z.number().positive('Monthly salary must be greater than 0').optional()
+  ),
 })
 
 export const UpdateUserSchema = z.object({
