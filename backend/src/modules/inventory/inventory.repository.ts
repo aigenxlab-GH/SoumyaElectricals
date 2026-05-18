@@ -205,40 +205,47 @@ export const inventoryRepository = {
   async saveForecast(entries: Array<{ product_id: string; forecast_date: string; qty_added: number }>, createdBy: string): Promise<void> {
     if (entries.length === 0) return
 
-    // Insert forecast records
-    const { error: fErr } = await supabase.from('inventory_forecast').insert(
-      entries.map((e) => ({ ...e, created_by: createdBy }))
-    )
+    // UPSERT (replace, not add): one row per (product_id, forecast_date).
+    // V29 added UNIQUE(product_id, forecast_date) which makes this idempotent —
+    // typing a new value REPLACES the stored value rather than accumulating.
+    const { error: fErr } = await supabase
+      .from('inventory_forecast')
+      .upsert(
+        entries.map((e) => ({ ...e, created_by: createdBy, created_at: new Date().toISOString() })),
+        { onConflict: 'product_id,forecast_date' }
+      )
     if (fErr) throw new AppError('DB_ERROR', fErr.message, 500)
 
-    // Update inventory quantities (upsert — create row if not exists)
-    const productTotals: Record<string, number> = {}
-    for (const e of entries) {
-      productTotals[e.product_id] = (productTotals[e.product_id] ?? 0) + e.qty_added
-    }
+    // Recompute inventory.total_qty / available_qty from the SUM of forecast rows
+    // for each product we touched. Other products' inventory rows are left alone.
+    const touchedProductIds = Array.from(new Set(entries.map((e) => e.product_id)))
+    for (const productId of touchedProductIds) {
+      const { data: rows, error: sumErr } = await supabase
+        .from('inventory_forecast')
+        .select('qty_added')
+        .eq('product_id', productId)
+      if (sumErr) throw new AppError('DB_ERROR', sumErr.message, 500)
+      const newTotal = (rows ?? []).reduce((s, r) => s + (r.qty_added ?? 0), 0)
 
-    for (const [productId, qty] of Object.entries(productTotals)) {
-      // Check if inventory row exists
       const { data: existing } = await supabase
         .from('inventory')
-        .select('id, total_qty, available_qty')
+        .select('reserved_qty, consumed_qty')
         .eq('product_id', productId)
         .maybeSingle()
+      const reserved = existing?.reserved_qty ?? 0
+      const consumed = existing?.consumed_qty ?? 0
+      const available = newTotal - reserved - consumed   // may be negative if over-committed
 
       if (existing) {
         const { error } = await supabase
           .from('inventory')
-          .update({
-            total_qty: existing.total_qty + qty,
-            available_qty: existing.available_qty + qty,
-            updated_at: new Date().toISOString(),
-          })
+          .update({ total_qty: newTotal, available_qty: available, updated_at: new Date().toISOString() })
           .eq('product_id', productId)
         if (error) throw new AppError('DB_ERROR', error.message, 500)
       } else {
         const { error } = await supabase
           .from('inventory')
-          .insert({ product_id: productId, total_qty: qty, available_qty: qty, reserved_qty: 0, consumed_qty: 0 })
+          .insert({ product_id: productId, total_qty: newTotal, available_qty: available, reserved_qty: 0, consumed_qty: 0 })
         if (error) throw new AppError('DB_ERROR', error.message, 500)
       }
     }

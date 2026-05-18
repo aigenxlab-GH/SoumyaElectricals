@@ -34,7 +34,42 @@ export default function InventoryPage() {
   const [dirty, setDirty] = useState<DirtyMap>({})
   const [saveError, setSaveError] = useState<string | null>(null)
   const [savedOk, setSavedOk] = useState(false)
-  const hasDirty = Object.values(dirty).some((m) => Object.values(m).some((v) => v !== ''))
+
+  // Quick lookup: saved M for (productId, monday)
+  const savedM = useMemo(() => {
+    const map: Record<string, Record<string, number>> = {}
+    for (const r of rows) {
+      map[r.product_id] = {}
+      for (const w of r.weeks) map[r.product_id][w.monday] = w.M
+    }
+    return map
+  }, [rows])
+
+  /** Parses the typed value the way Save will: empty/blank/NaN → 0. */
+  function parseTyped(raw: string): number {
+    if (raw === undefined) return 0
+    const t = raw.trim()
+    if (t === '') return 0
+    const n = parseInt(t, 10)
+    return isNaN(n) ? 0 : n
+  }
+
+  /** A cell is dirty when the typed value differs from the saved M (empty == 0). */
+  function isDirtyCell(productId: string, monday: string): boolean {
+    const raw = dirty[productId]?.[monday]
+    if (raw === undefined) return false
+    return parseTyped(raw) !== (savedM[productId]?.[monday] ?? 0)
+  }
+
+  const hasDirty = useMemo(() => {
+    for (const productId of Object.keys(dirty)) {
+      for (const monday of Object.keys(dirty[productId] ?? {})) {
+        if (isDirtyCell(productId, monday)) return true
+      }
+    }
+    return false
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty, savedM])
 
   // Sorting state
   const [sortKey, setSortKey] = useState<SortKey>('code')
@@ -94,15 +129,20 @@ export default function InventoryPage() {
     return sorted
   }, [rows, sortKey, sortDir])
 
+  const handleReset = useCallback(() => {
+    setDirty({})
+    setSaveError(null)
+  }, [])
+
   const handleSave = useCallback(() => {
     setSaveError(null)
     const entries: Array<{ product_id: string; forecast_date: string; qty_added: number }> = []
     for (const [productId, mondayMap] of Object.entries(dirty)) {
       for (const [monday, val] of Object.entries(mondayMap)) {
-        const num = parseInt(val, 10)
-        if (!isNaN(num) && num > 0) {
-          entries.push({ product_id: productId, forecast_date: monday, qty_added: num })
-        }
+        const typed = parseTyped(val)
+        const saved = savedM[productId]?.[monday] ?? 0
+        if (typed === saved) continue           // no change — skip
+        entries.push({ product_id: productId, forecast_date: monday, qty_added: typed })
       }
     }
     if (entries.length === 0) return
@@ -116,7 +156,8 @@ export default function InventoryPage() {
         onError: (err) => setSaveError(parseApiError(err)),
       }
     )
-  }, [dirty, saveForecast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty, saveForecast, savedM])
 
   const thFixed = (active: boolean) =>
     `px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 transition-colors ${active ? 'text-blue-700' : 'text-gray-500'}`
@@ -129,13 +170,23 @@ export default function InventoryPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Inventory</h1>
         {canEdit && (
-          <button
-            onClick={handleSave}
-            disabled={!hasDirty || saveForecast.isPending}
-            className="text-sm px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-40"
-          >
-            {saveForecast.isPending ? 'Saving…' : 'Save Forecast'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReset}
+              disabled={!hasDirty || saveForecast.isPending}
+              title={!hasDirty ? 'Nothing to reset' : 'Revert all unsaved changes'}
+              className="text-sm px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Reset
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={!hasDirty || saveForecast.isPending}
+              className="text-sm px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {saveForecast.isPending ? 'Saving…' : 'Save Forecast'}
+            </button>
+          </div>
         )}
       </div>
 
@@ -219,15 +270,18 @@ export default function InventoryPage() {
                       const dirtyVal = dirty[row.product_id]?.[cell.monday]
                       const savedVal = cell.M > 0 ? String(cell.M) : ''
                       const inputVal = dirtyVal ?? savedVal
-                      const isDirty = dirtyVal !== undefined && dirtyVal !== ''
-                      // Live A — cell.A from server + unsaved M for THIS week and any earlier visible week.
-                      // Typing M in week K bumps A for all weeks N ≥ K (cumulative).
+                      const isDirty = isDirtyCell(row.product_id, cell.monday)
+                      // Live A preview — apply DELTA (typed − saved) of each visible week ≤ N
+                      // so typing 9 over saved 10 reduces A by 1, not adds 9.
                       let liveA = cell.A
                       const productDirty = dirty[row.product_id] ?? {}
                       for (let j = 0; j <= weekIdx; j++) {
-                        const raw = productDirty[row.weeks[j].monday]
-                        const n = raw === undefined ? NaN : parseInt(raw, 10)
-                        if (!isNaN(n) && n > 0) liveA += n
+                        const monday = row.weeks[j].monday
+                        const raw = productDirty[monday]
+                        if (raw === undefined) continue
+                        const typed = parseTyped(raw)
+                        const saved = savedM[row.product_id]?.[monday] ?? 0
+                        liveA += (typed - saved)
                       }
                       if (liveA < 0) liveA = 0
                       return (
@@ -236,7 +290,7 @@ export default function InventoryPage() {
                           <td className="px-2 py-3 text-center border-b border-gray-100 border-l border-gray-200">
                             <input
                               type="number"
-                              min={1}
+                              min={0}
                               step={1}
                               value={inputVal}
                               disabled={!canEdit}

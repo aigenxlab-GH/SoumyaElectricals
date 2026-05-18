@@ -3,7 +3,7 @@ import { z } from 'zod'
 export const ForecastEntrySchema = z.object({
   product_id: z.string().uuid('Invalid product ID'),
   forecast_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
-  qty_added: z.number().int('Quantity must be a whole number').positive('Quantity must be greater than 0'),
+  qty_added: z.number().int('Quantity must be a whole number').min(0, 'Quantity cannot be negative'),
 })
 
 export const SaveForecastSchema = z.object({
