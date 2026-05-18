@@ -25,6 +25,7 @@ export const SIDEBAR_NAV: Record<Role, NavItem[]> = {
     { label: 'My Calendar', path: '/my-calendar' },
     { label: 'Timecard Approvals', path: '/approvals/timecards' },
     { label: 'Leave Approvals', path: '/approvals/leaves' },
+    { label: 'Payroll', path: '/payroll' },
   ],
   owner: [
     { label: 'Dashboard', path: '/owner/dashboard' },
@@ -32,6 +33,7 @@ export const SIDEBAR_NAV: Record<Role, NavItem[]> = {
     { label: 'Inventory', path: '/inventory' },
     { label: 'Quotations', path: '/quotations' },
     { label: 'Users', path: '/owner/users' },
+    { label: 'Payroll', path: '/payroll' },
     { label: 'Timecard Approvals', path: '/owner/approvals/timecards' },
     { label: 'Leave Approvals', path: '/owner/approvals/leaves' },
     { label: 'Team Calendar', path: '/owner/calendar' },

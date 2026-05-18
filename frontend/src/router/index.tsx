@@ -19,6 +19,8 @@ import CreateUser from '../pages/owner/CreateUser'
 import EditUser from '../pages/owner/EditUser'
 import UserDetail from '../pages/owner/UserDetail'
 import Profile from '../pages/Profile'
+import PayrollList from '../pages/payroll/PayrollList'
+import PayrollDetail from '../pages/payroll/PayrollDetail'
 import SystemConfig from '../pages/owner/SystemConfig'
 import ProductList from '../pages/owner/ProductList'
 import AddProduct from '../pages/owner/AddProduct'
@@ -60,6 +62,8 @@ export const router = createBrowserRouter([
             children: [
               { path: '/approvals/timecards', element: <TimecardApproval /> },
               { path: '/approvals/leaves', element: <LeaveApproval /> },
+              { path: '/payroll', element: <PayrollList /> },
+              { path: '/payroll/:id', element: <PayrollDetail /> },
             ],
           },
           {
