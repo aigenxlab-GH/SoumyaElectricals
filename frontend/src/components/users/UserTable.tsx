@@ -188,6 +188,18 @@ export function UserTable({ users }: Props) {
         />
       )}
 
+      {/* Permanent Delete — confirmation dialog */}
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Permanently delete user?"
+          description={`This will REMOVE ${confirmDelete.full_name} (${confirmDelete.employee_id}) from the system along with their timecards, leaves, overtime, leave balance, salary history, and payroll records. This cannot be undone. Products / quotations / inventory created by this user are kept (created-by becomes blank). Continue?`}
+          confirmLabel="Yes, Delete Permanently"
+          isLoading={deleteUser.isPending}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+
       {/* Reset result — auto-dismiss toast */}
       {resetResult && (
         <div className="fixed bottom-6 right-6 z-50 max-w-md">
