@@ -47,6 +47,14 @@ export function useResetPassword() {
   })
 }
 
+export function useDeleteUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (userId: string) => usersApi.delete(userId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.list() }),
+  })
+}
+
 export function useUpdateUser(id: string) {
   const qc = useQueryClient()
   return useMutation({

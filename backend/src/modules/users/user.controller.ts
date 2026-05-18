@@ -50,4 +50,10 @@ export const userController = {
       res.json(ok(await userService.resetPassword(req.params.id, req.user!.id)))
     } catch (err) { next(err) }
   },
+
+  async deleteUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.json(ok(await userService.deleteUser(req.params.id, req.user!.id)))
+    } catch (err) { next(err) }
+  },
 }

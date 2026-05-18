@@ -151,4 +151,78 @@ export const userService = {
 
     return { employee_id: target.employee_id, full_name: target.full_name, default_password: DEFAULT_PASSWORD }
   },
+
+  /**
+   * Owner-only. Permanently removes an inactive user from the system.
+   *
+   * Rules:
+   *   • Cannot delete an owner
+   *   • Cannot delete yourself
+   *   • Cannot delete an active user — owner must deactivate first
+   *   • Cannot delete a manager who still has direct reports
+   *
+   * Cleanup:
+   *   • Nulls out user references on rows that should outlive the user
+   *     (products.created_by, quotations.created_by/approved_by/rejected_by,
+   *      inventory_forecast.created_by, payrolls.generated_by, salary_history.created_by)
+   *   • DELETE from users cascades through leave_balance / timecards / leaves /
+   *     overtime / payrolls.user_id / salary_history.user_id
+   *   • Then deletes the auth.users row via Supabase Admin API
+   */
+  async deleteUser(targetUserId: string, actorId: string) {
+    const target = await userRepository.findById(targetUserId)
+    if (!target) throw new AppError('NOT_FOUND', 'User not found', 404)
+    if (target.id === actorId) {
+      throw new AppError('FORBIDDEN', 'You cannot delete your own account', 400)
+    }
+    if (target.role === 'owner') {
+      throw new AppError('FORBIDDEN', 'Owner accounts cannot be deleted', 400)
+    }
+    if (target.is_active) {
+      throw new AppError('USER_ACTIVE', 'Deactivate the user first before deleting them', 400)
+    }
+
+    if (target.role === 'manager') {
+      const linked = await userRepository.countLinkedEmployees(target.id)
+      if (linked > 0) {
+        throw new AppError(
+          'LINKED_EMPLOYEES',
+          `Cannot delete — ${linked} employee(s) still report to this manager. Reassign them first.`,
+          400
+        )
+      }
+    }
+
+    // 1. NULL out FK references that should survive the user's deletion
+    const nullOps: Array<{ table: string; column: string }> = [
+      { table: 'products',           column: 'created_by'    },
+      { table: 'quotations',         column: 'created_by'    },
+      { table: 'quotations',         column: 'approved_by'   },
+      { table: 'quotations',         column: 'rejected_by'   },
+      { table: 'inventory_forecast', column: 'created_by'    },
+      { table: 'payrolls',           column: 'generated_by'  },
+      { table: 'salary_history',     column: 'created_by'    },
+    ]
+    for (const { table, column } of nullOps) {
+      const { error } = await supabase.from(table).update({ [column]: null }).eq(column, target.id)
+      // Tables that might not exist (older DBs) or rows that don't exist — non-fatal
+      if (error && !/does not exist/i.test(error.message)) {
+        throw new AppError('DB_ERROR', `Cleanup on ${table}.${column} failed: ${error.message}`, 500)
+      }
+    }
+
+    // 2. Delete from public.users (cascades to leave_balance, timecards, leaves,
+    //    overtime, payrolls.user_id, salary_history.user_id via ON DELETE CASCADE)
+    const { error: delErr } = await supabase.from('users').delete().eq('id', target.id)
+    if (delErr) throw new AppError('DB_ERROR', `Failed to delete user: ${delErr.message}`, 500)
+
+    // 3. Remove the auth.users row (also drops auth.identities / sessions / refresh_tokens via CASCADE)
+    const { error: authErr } = await supabase.auth.admin.deleteUser(target.id)
+    if (authErr) {
+      // Public row is gone; auth row failed. Surface a warning but don't fail the operation.
+      console.warn(`auth.users delete failed for ${target.employee_id}: ${authErr.message}`)
+    }
+
+    return { employee_id: target.employee_id, full_name: target.full_name }
+  },
 }

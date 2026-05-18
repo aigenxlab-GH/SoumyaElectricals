@@ -37,4 +37,9 @@ export const usersApi = {
     const { data } = await apiClient.post<{ data: { employee_id: string; full_name: string; default_password: string } }>(`/users/${id}/reset-password`)
     return data.data
   },
+
+  async delete(id: string): Promise<{ employee_id: string; full_name: string }> {
+    const { data } = await apiClient.delete<{ data: { employee_id: string; full_name: string } }>(`/users/${id}`)
+    return data.data
+  },
 }

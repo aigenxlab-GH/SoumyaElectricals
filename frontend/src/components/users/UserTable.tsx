@@ -6,7 +6,7 @@ import { Paginator } from '../../common/Paginator'
 import { usePagination } from '../../common/usePagination'
 import { useSorting } from '../../common/useSorting'
 import { SortableHeader } from '../../common/SortableHeader'
-import { useResetPassword } from '../../hooks/useUsers'
+import { useResetPassword, useDeleteUser } from '../../hooks/useUsers'
 import { useAuthStore } from '../../store/auth.store'
 import { parseApiError } from '../../utils/api-error'
 import type { User } from '../../types/models'
@@ -31,8 +31,25 @@ function RoleBadge({ role }: { role: User['role'] }) {
 export function UserTable({ users }: Props) {
   const { user: currentUser } = useAuthStore()
   const resetPassword = useResetPassword()
+  const deleteUser   = useDeleteUser()
   const [confirmReset, setConfirmReset] = useState<User | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<User | null>(null)
   const [resetResult, setResetResult] = useState<{ ok: boolean; message: string } | null>(null)
+
+  function handleDeleteConfirm() {
+    if (!confirmDelete) return
+    const target = confirmDelete
+    deleteUser.mutate(target.id, {
+      onSuccess: (res) => {
+        setConfirmDelete(null)
+        setResetResult({ ok: true, message: `${res.full_name} (${res.employee_id}) has been permanently removed from the system.` })
+      },
+      onError: (err) => {
+        setConfirmDelete(null)
+        setResetResult({ ok: false, message: parseApiError(err) ?? 'Failed to delete user' })
+      },
+    })
+  }
 
   function handleResetConfirm() {
     if (!confirmReset) return
@@ -134,6 +151,16 @@ export function UserTable({ users }: Props) {
                           className="text-xs px-3 py-1.5 border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 font-medium transition-colors disabled:opacity-50"
                         >
                           Reset Password
+                        </button>
+                      )}
+                      {currentUser?.id !== user.id && !user.is_active && (
+                        <button
+                          onClick={() => setConfirmDelete(user)}
+                          disabled={deleteUser.isPending}
+                          title="Permanently remove this inactive user from the system"
+                          className="text-xs px-3 py-1.5 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 font-medium transition-colors disabled:opacity-50"
+                        >
+                          Delete
                         </button>
                       )}
                     </div>

@@ -17,5 +17,6 @@ router.get('/:id', roleGuard('owner'), userController.getById)
 router.post('/', roleGuard('owner'), validate(CreateUserSchema), userController.create)
 router.patch('/:id', roleGuard('owner'), validate(UpdateUserSchema), userController.update)
 router.post('/:id/reset-password', roleGuard('owner'), userController.resetPassword)
+router.delete('/:id', roleGuard('owner'), userController.deleteUser)
 
 export default router
