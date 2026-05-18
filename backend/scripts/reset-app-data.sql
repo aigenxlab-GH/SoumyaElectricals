@@ -14,6 +14,8 @@
 BEGIN;
 
   -- ── 1. Wipe transactional + user data (FK-safe order) ───────────────────
+  DELETE FROM payrolls;
+  DELETE FROM salary_history;
   DELETE FROM quotation_items;
   DELETE FROM quotations;
   DELETE FROM inventory_forecast;
@@ -143,4 +145,6 @@ UNION ALL SELECT 'quotations',         COUNT(*) FROM quotations
 UNION ALL SELECT 'quotation_items',    COUNT(*) FROM quotation_items
 UNION ALL SELECT 'timecards',          COUNT(*) FROM timecards
 UNION ALL SELECT 'leaves',             COUNT(*) FROM leaves
-UNION ALL SELECT 'overtime',           COUNT(*) FROM overtime;
+UNION ALL SELECT 'overtime',           COUNT(*) FROM overtime
+UNION ALL SELECT 'salary_history',     COUNT(*) FROM salary_history
+UNION ALL SELECT 'payrolls',           COUNT(*) FROM payrolls;
