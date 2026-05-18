@@ -37,8 +37,6 @@ export function mondayOfWeek(dateISO: string): string {
   return toLocalDateISO(d)
 }
 
-const ACTIVE_QUOTATION_STATUSES = ['draft', 'requested', 'approved'] as const
-
 export const inventoryRepository = {
   /** Legacy: returns a map of product_id → current available_qty (global, ignores delivery week) */
   async getAvailableQtyMap(productIds: string[]): Promise<Record<string, number>> {
@@ -56,109 +54,49 @@ export const inventoryRepository = {
   /**
    * Returns map of product_id → 8-week A array.
    *
-   * Week-aware formula (reservations belong to their delivery week):
-   *   A(N) = total_qty − consumed_qty − M_beyond − sum_M_after_N − cum_R_through_N
+   * New (V30) model: M per week is `inventory_forecast.qty_added` directly
+   * (already reduced by active+finalised quotation consumption, since each
+   * quotation create walks backward and decrements the rows it took from).
    *
-   * Where cum_R_through_N is the running total of active reservations whose
-   * delivery falls in visible week ≤ N. So cancelling a reservation for week K
-   * only restores A for weeks ≥ K (the cancel’s qty flows into A(K) and onwards).
+   *   A(N) = baseline_before_window + sum(M for weeks 1..N)
    *
-   * Returned in the same order as getNext8Mondays().
+   * Where baseline_before_window is the SUM of qty_added for any forecast
+   * rows older than the first visible Monday (carry-over stock).
    */
   async getWeeklyAvailabilityMap(productIds: string[]): Promise<Record<string, InventoryWeekCell[]>> {
     if (productIds.length === 0) return {}
     const mondays = getNext8Mondays()
     const lastVisibleMonday = mondays[mondays.length - 1]
 
-    // Inventory (total + consumed; we no longer derive A from global available_qty)
-    const { data: inv, error: iErr } = await supabase
-      .from('inventory')
-      .select('product_id, total_qty, consumed_qty')
-      .in('product_id', productIds)
-    if (iErr) throw new AppError('DB_ERROR', iErr.message, 500)
-
-    const totalByProduct: Record<string, number> = {}
-    const consumedByProduct: Record<string, number> = {}
-    for (const r of inv ?? []) {
-      totalByProduct[r.product_id] = r.total_qty
-      consumedByProduct[r.product_id] = r.consumed_qty
-    }
-
-    // Forecasts inside the visible window (M per week)
-    const { data: forecastsInWindow, error: f1Err } = await supabase
+    // All forecast rows up to and including the last visible Monday — group by product+date
+    const { data: forecasts, error } = await supabase
       .from('inventory_forecast')
       .select('product_id, forecast_date, qty_added')
       .in('product_id', productIds)
-      .in('forecast_date', mondays)
-    if (f1Err) throw new AppError('DB_ERROR', f1Err.message, 500)
+      .lte('forecast_date', lastVisibleMonday)
+    if (error) throw new AppError('DB_ERROR', error.message, 500)
 
-    // Forecasts beyond the window (subtracted from baseline so they don't inflate visible A)
-    const { data: forecastsBeyond, error: f2Err } = await supabase
-      .from('inventory_forecast')
-      .select('product_id, qty_added')
-      .in('product_id', productIds)
-      .gt('forecast_date', lastVisibleMonday)
-    if (f2Err) throw new AppError('DB_ERROR', f2Err.message, 500)
-
-    // Active reservations by product, grouped by Monday-of-delivery (visible weeks only)
-    const { data: activeItems, error: rErr } = await supabase
-      .from('quotation_items')
-      .select('product_id, quantity, quotations!inner(delivery_date, status)')
-      .in('product_id', productIds)
-      .in('quotations.status', ACTIVE_QUOTATION_STATUSES as unknown as string[])
-    if (rErr) throw new AppError('DB_ERROR', rErr.message, 500)
-
-    const M: Record<string, Record<string, number>> = {}
-    for (const f of forecastsInWindow ?? []) {
-      M[f.product_id] ??= {}
-      M[f.product_id][f.forecast_date] = (M[f.product_id][f.forecast_date] ?? 0) + f.qty_added
+    const byProduct: Record<string, Record<string, number>> = {}
+    for (const f of forecasts ?? []) {
+      byProduct[f.product_id] ??= {}
+      byProduct[f.product_id][f.forecast_date] =
+        (byProduct[f.product_id][f.forecast_date] ?? 0) + f.qty_added
     }
 
-    const beyondMSum: Record<string, number> = {}
-    for (const f of forecastsBeyond ?? []) {
-      beyondMSum[f.product_id] = (beyondMSum[f.product_id] ?? 0) + f.qty_added
-    }
-
-    // R per product per Monday (visible weeks only — reservations for delivery
-    // outside the visible window do not affect any visible A cell)
-    const R: Record<string, Record<string, number>> = {}
-    type ItemRow = { product_id: string; quantity: number; quotations: { delivery_date: string; status: string } | { delivery_date: string; status: string }[] }
-    for (const raw of (activeItems ?? []) as unknown as ItemRow[]) {
-      const q = Array.isArray(raw.quotations) ? raw.quotations[0] : raw.quotations
-      if (!q?.delivery_date) continue
-      const wk = mondayOfWeek(q.delivery_date)
-      if (!mondays.includes(wk)) continue
-      R[raw.product_id] ??= {}
-      R[raw.product_id][wk] = (R[raw.product_id][wk] ?? 0) + raw.quantity
-    }
-
-    // Compose week cells per product
     const result: Record<string, InventoryWeekCell[]> = {}
     for (const pid of productIds) {
-      const total = totalByProduct[pid] ?? 0
-      const consumed = consumedByProduct[pid] ?? 0
-      const productM = M[pid] ?? {}
-      const productR = R[pid] ?? {}
-      const beyondM = beyondMSum[pid] ?? 0
+      const productData = byProduct[pid] ?? {}
 
-      // sum_M_after_N: walk backwards through visible mondays
-      const mAfter: Record<string, number> = {}
-      let runningAfter = 0
-      for (let i = mondays.length - 1; i >= 0; i--) {
-        mAfter[mondays[i]] = runningAfter
-        runningAfter += productM[mondays[i]] ?? 0
+      // Carry-over from any pre-window forecast rows
+      let cum = 0
+      for (const [dateISO, qty] of Object.entries(productData)) {
+        if (dateISO < mondays[0]) cum += qty
       }
 
-      // cum_R_through_N: walk forwards through visible mondays
-      let cumR = 0
       result[pid] = mondays.map((monday) => {
-        cumR += productR[monday] ?? 0
-        const A = total - consumed - beyondM - mAfter[monday] - cumR
-        return {
-          monday,
-          M: productM[monday] ?? 0,
-          A: Math.max(0, A),
-        }
+        const m = productData[monday] ?? 0
+        cum += m
+        return { monday, M: m, A: Math.max(0, cum) }
       })
     }
     return result
@@ -216,8 +154,10 @@ export const inventoryRepository = {
       )
     if (fErr) throw new AppError('DB_ERROR', fErr.message, 500)
 
-    // Recompute inventory.total_qty / available_qty from the SUM of forecast rows
-    // for each product we touched. Other products' inventory rows are left alone.
+    // Recompute inventory aggregates for each touched product.
+    // V30 invariant:
+    //   available_qty = SUM(qty_added)               — what's free to commit
+    //   total_qty     = available + reserved + consumed  — raw cumulative production
     const touchedProductIds = Array.from(new Set(entries.map((e) => e.product_id)))
     for (const productId of touchedProductIds) {
       const { data: rows, error: sumErr } = await supabase
@@ -225,7 +165,7 @@ export const inventoryRepository = {
         .select('qty_added')
         .eq('product_id', productId)
       if (sumErr) throw new AppError('DB_ERROR', sumErr.message, 500)
-      const newTotal = (rows ?? []).reduce((s, r) => s + (r.qty_added ?? 0), 0)
+      const sumQty = (rows ?? []).reduce((s, r) => s + (r.qty_added ?? 0), 0)
 
       const { data: existing } = await supabase
         .from('inventory')
@@ -234,18 +174,18 @@ export const inventoryRepository = {
         .maybeSingle()
       const reserved = existing?.reserved_qty ?? 0
       const consumed = existing?.consumed_qty ?? 0
-      const available = newTotal - reserved - consumed   // may be negative if over-committed
+      const total = sumQty + reserved + consumed
 
       if (existing) {
         const { error } = await supabase
           .from('inventory')
-          .update({ total_qty: newTotal, available_qty: available, updated_at: new Date().toISOString() })
+          .update({ total_qty: total, available_qty: sumQty, updated_at: new Date().toISOString() })
           .eq('product_id', productId)
         if (error) throw new AppError('DB_ERROR', error.message, 500)
       } else {
         const { error } = await supabase
           .from('inventory')
-          .insert({ product_id: productId, total_qty: newTotal, available_qty: available, reserved_qty: 0, consumed_qty: 0 })
+          .insert({ product_id: productId, total_qty: total, available_qty: sumQty, reserved_qty: 0, consumed_qty: 0 })
         if (error) throw new AppError('DB_ERROR', error.message, 500)
       }
     }

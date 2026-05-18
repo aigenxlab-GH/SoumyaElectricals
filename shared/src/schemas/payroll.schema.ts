@@ -30,14 +30,6 @@ export const GeneratePayrollSchema = z.object({
 
 export type GeneratePayrollDto = z.infer<typeof GeneratePayrollSchema>
 
-export const ProcessPayrollSchema = z.object({
-  action: z.enum(['finalise', 'mark-paid', 'revert']),
-})
-
-export type ProcessPayrollDto = z.infer<typeof ProcessPayrollSchema>
-
-export type PayrollStatus = 'draft' | 'finalised' | 'paid'
-
 export interface Payroll {
   id: string
   user_id: string
@@ -49,7 +41,9 @@ export interface Payroll {
   full_period_working_days: number
   effective_working_days: number
   present_days: number
-  paid_leave_days: number
+  paid_leave_days: number              // raw count of all approved leaves in period
+  paid_leaves_within_balance: number   // leaves covered by available balance (paid)
+  unpaid_leaves_lop: number            // leaves beyond available balance (LOP)
   unpaid_absent_days: number
   overtime_hours: number
   overtime_pay: number
@@ -64,11 +58,8 @@ export interface Payroll {
   employee_id_snapshot: string
   employee_role_snapshot: string
   employee_join_date_snapshot: string
-  status: PayrollStatus
   generated_by: string | null
   generated_at: string
-  finalised_at: string | null
-  paid_at: string | null
   updated_at: string
 }
 

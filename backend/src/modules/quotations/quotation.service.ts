@@ -183,8 +183,10 @@ export const quotationService = {
     const items = buildItemInserts(dto.items)
     const quotation = await quotationRepository.create(payload, items)
 
-    // Reserve inventory
+    // Reserve inventory by consuming forecast rows backward from delivery week
     await quotationRepository.reserveInventory(
+      quotation.id,
+      dto.delivery_date,
       dto.items.map((i) => ({ product_id: i.product_id, quantity: i.quantity }))
     )
 
@@ -247,9 +249,11 @@ export const quotationService = {
       final_amount: dto.final_amount,
     }, newItems)
 
-    // Adjust inventory for delta
-    // For rejected quotations: oldItemsForDelta is [] so new items are fully reserved fresh
+    // Re-reserve from scratch: revert old consumption, then consume from new delivery week
+    // For rejected quotations: oldItemsForDelta is [] so only the new items are reserved fresh
     await quotationRepository.adjustInventoryDelta(
+      id,
+      dto.delivery_date,
       oldItemsForDelta.map((i) => ({ product_id: i.product_id!, quantity: i.quantity })),
       dto.items.map((i) => ({ product_id: i.product_id, quantity: i.quantity }))
     )
@@ -288,8 +292,9 @@ export const quotationService = {
       rejected_by_snapshot: rejectorUser?.full_name ?? '',
       rejected_by_employee_id_snapshot: user.employee_id,
     })
-    // Release reserved inventory back to available
+    // Release reserved inventory back to available (revert forecast consumption)
     await quotationRepository.releaseInventory(
+      id,
       existing.items.map((i) => ({ product_id: i.product_id!, quantity: i.quantity }))
     )
     return result
@@ -305,7 +310,7 @@ export const quotationService = {
       throw new AppError('FORBIDDEN', 'Not authorised to finalise this quotation', 403)
     }
 
-    const result = await quotationRepository.updateStatus(id, 'approved', 'finalised')
+    const result = await quotationRepository.finaliseQuotation(id)
 
     // Consume inventory
     const items = await quotationRepository.getItems(id)
@@ -326,9 +331,10 @@ export const quotationService = {
 
     const result = await quotationRepository.updateStatus(id, existing.status, 'cancelled')
 
-    // Release inventory reservation
+    // Release inventory reservation (revert forecast consumption)
     const items = existing.items
     await quotationRepository.releaseInventory(
+      id,
       items.map((i) => ({ product_id: i.product_id!, quantity: i.quantity }))
     )
 
@@ -372,8 +378,9 @@ export const quotationService = {
         rejected_by_snapshot: rejectorUser?.full_name ?? '',
         rejected_by_employee_id_snapshot: user.employee_id,
       })
-      // Release reserved inventory back to available
+      // Release reserved inventory back to available (revert forecast consumption)
       await quotationRepository.releaseInventory(
+        id,
         existing.items.map((i) => ({ product_id: i.product_id!, quantity: i.quantity }))
       )
       return result

@@ -1,9 +1,10 @@
 import { supabase } from '../../lib/supabase'
 import { AppError } from '../../types'
+import { mondayOfWeek } from '../inventory/inventory.repository'
 import type { Quotation, QuotationDetail, QuotationItem, QuotationStatus } from '@soumya/shared'
 import type { QuotationListParams } from '@soumya/shared'
 
-type QuotationInsert = Omit<Quotation, 'id' | 'created_at' | 'updated_at'>
+type QuotationInsert = Omit<Quotation, 'id' | 'created_at' | 'updated_at' | 'offer_code'>
 type ItemInsert = Omit<QuotationItem, 'id'>
 
 export const quotationRepository = {
@@ -36,8 +37,8 @@ export const quotationRepository = {
     if (filter.search) {
       const s = filter.search.replace(/%/g, '\\%').replace(/_/g, '\\_')
       const like = `%${s}%`
-      countQ = countQ.or(`client_name.ilike.${like},quotation_code.ilike.${like}`)
-      dataQ  = dataQ.or(`client_name.ilike.${like},quotation_code.ilike.${like}`)
+      countQ = countQ.or(`client_name.ilike.${like},quotation_code.ilike.${like},offer_code.ilike.${like}`)
+      dataQ  = dataQ.or(`client_name.ilike.${like},quotation_code.ilike.${like},offer_code.ilike.${like}`)
     }
     if (filter.dateFrom) {
       countQ = countQ.gte('quotation_date', filter.dateFrom)
@@ -179,6 +180,25 @@ export const quotationRepository = {
     return data
   },
 
+  /**
+   * Generate offer_code and atomically transition 'approved' → 'finalised'.
+   * Returns the updated quotation (without items — call getItems separately).
+   */
+  async finaliseQuotation(id: string): Promise<Quotation> {
+    const { data: code, error: cErr } = await supabase.rpc('next_offer_code')
+    if (cErr || !code) throw new AppError('DB_ERROR', cErr?.message ?? 'Failed to generate offer code', 500)
+
+    const { data, error } = await supabase
+      .from('quotations')
+      .update({ status: 'finalised', offer_code: code, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('status', 'approved')
+      .select()
+      .single()
+    if (error || !data) throw new AppError('CONFLICT', 'Quotation is not in the expected status for this action', 409)
+    return data
+  },
+
   async getItems(quotationId: string): Promise<QuotationItem[]> {
     const { data, error } = await supabase
       .from('quotation_items')
@@ -188,47 +208,183 @@ export const quotationRepository = {
     return data ?? []
   },
 
-  // ── Inventory operations ───────────────────────────────────────────────────
+  // ── Inventory operations (V30 forecast-consumption model) ─────────────────
+  //
+  // Reserving inventory now means WALKING BACKWARD from the delivery week and
+  // decrementing inventory_forecast.qty_added until the requested qty is
+  // satisfied. Each take is recorded in `quotation_item_consumption` so it
+  // can be reverted exactly on cancel/reject/edit. The inventory aggregate
+  // row tracks reserved_qty/consumed_qty as informational totals; the actual
+  // per-week A is derived live from qty_added in inventoryRepository.
 
-  /** Reserve inventory for all items in a new draft quotation */
-  async reserveInventory(items: Array<{ product_id: string; quantity: number }>): Promise<void> {
-    for (const item of items) {
-      const { error } = await supabase.rpc('adjust_inventory', {
-        p_product_id: item.product_id,
-        p_available_delta: -item.quantity,
-        p_reserved_delta: item.quantity,
-        p_consumed_delta: 0,
-        p_total_delta: 0,
+  /** Consume forecast rows for a single item; returns nothing, throws if short */
+  async _consumeForecast(
+    quotationId: string,
+    productId: string,
+    qty: number,
+    deliveryDateISO: string
+  ): Promise<void> {
+    if (qty <= 0) return
+    const deliveryMonday = mondayOfWeek(deliveryDateISO)
+
+    const { data: rows, error } = await supabase
+      .from('inventory_forecast')
+      .select('id, forecast_date, qty_added')
+      .eq('product_id', productId)
+      .lte('forecast_date', deliveryMonday)
+      .gt('qty_added', 0)
+      .order('forecast_date', { ascending: false })
+    if (error) throw new AppError('DB_ERROR', error.message, 500)
+
+    let remaining = qty
+    const consumptionRows: Array<{
+      quotation_id: string
+      product_id: string
+      forecast_date: string
+      qty_consumed: number
+    }> = []
+
+    for (const row of rows ?? []) {
+      if (remaining <= 0) break
+      const take = Math.min(remaining, row.qty_added)
+      const { error: updErr } = await supabase
+        .from('inventory_forecast')
+        .update({ qty_added: row.qty_added - take })
+        .eq('id', row.id)
+      if (updErr) throw new AppError('DB_ERROR', updErr.message, 500)
+      consumptionRows.push({
+        quotation_id: quotationId,
+        product_id: productId,
+        forecast_date: row.forecast_date,
+        qty_consumed: take,
       })
-      if (error) throw new AppError('DB_ERROR', `Failed to reserve inventory for product ${item.product_id}: ${error.message}`, 500)
+      remaining -= take
+    }
+
+    if (remaining > 0) {
+      throw new AppError(
+        'INSUFFICIENT_INVENTORY',
+        `Insufficient projected stock for product ${productId} by ${deliveryDateISO}: short by ${remaining}`,
+        400
+      )
+    }
+
+    if (consumptionRows.length > 0) {
+      const { error: insErr } = await supabase
+        .from('quotation_item_consumption')
+        .insert(consumptionRows)
+      if (insErr) throw new AppError('DB_ERROR', insErr.message, 500)
     }
   },
 
-  /** Release inventory reservation (on reject / cancel) */
-  async releaseInventory(items: Array<{ product_id: string; quantity: number }>): Promise<void> {
+  /** Restore forecast rows for a quotation (optionally a specific product) */
+  async _revertConsumption(quotationId: string, productId?: string): Promise<void> {
+    let q = supabase
+      .from('quotation_item_consumption')
+      .select('id, product_id, forecast_date, qty_consumed')
+      .eq('quotation_id', quotationId)
+    if (productId) q = q.eq('product_id', productId)
+
+    const { data: rows, error } = await q
+    if (error) throw new AppError('DB_ERROR', error.message, 500)
+
+    for (const row of rows ?? []) {
+      const { data: existing, error: fErr } = await supabase
+        .from('inventory_forecast')
+        .select('id, qty_added')
+        .eq('product_id', row.product_id)
+        .eq('forecast_date', row.forecast_date)
+        .maybeSingle()
+      if (fErr) throw new AppError('DB_ERROR', fErr.message, 500)
+
+      if (existing) {
+        const { error: updErr } = await supabase
+          .from('inventory_forecast')
+          .update({ qty_added: existing.qty_added + row.qty_consumed })
+          .eq('id', existing.id)
+        if (updErr) throw new AppError('DB_ERROR', updErr.message, 500)
+      } else {
+        // Forecast row was deleted (manager pruned the week). Recreate it.
+        const { error: insErr } = await supabase
+          .from('inventory_forecast')
+          .insert({
+            product_id: row.product_id,
+            forecast_date: row.forecast_date,
+            qty_added: row.qty_consumed,
+          })
+        if (insErr) throw new AppError('DB_ERROR', insErr.message, 500)
+      }
+    }
+
+    let delQ = supabase
+      .from('quotation_item_consumption')
+      .delete()
+      .eq('quotation_id', quotationId)
+    if (productId) delQ = delQ.eq('product_id', productId)
+    const { error: delErr } = await delQ
+    if (delErr) throw new AppError('DB_ERROR', delErr.message, 500)
+  },
+
+  /** Apply an aggregate inventory delta (available/reserved/consumed only — never total) */
+  async _bumpInventoryAggregate(
+    productId: string,
+    deltas: { available_delta: number; reserved_delta: number; consumed_delta: number }
+  ): Promise<void> {
+    const { error } = await supabase.rpc('adjust_inventory', {
+      p_product_id: productId,
+      p_available_delta: deltas.available_delta,
+      p_reserved_delta:  deltas.reserved_delta,
+      p_consumed_delta:  deltas.consumed_delta,
+      p_total_delta:     0,
+    })
+    if (error) throw new AppError('DB_ERROR', `Failed to adjust inventory aggregate for ${productId}: ${error.message}`, 500)
+  },
+
+  /** Reserve inventory for a new quotation: consume forecast backward from delivery week */
+  async reserveInventory(
+    quotationId: string,
+    deliveryDateISO: string,
+    items: Array<{ product_id: string; quantity: number }>
+  ): Promise<void> {
     for (const item of items) {
-      const { error } = await supabase.rpc('adjust_inventory', {
-        p_product_id: item.product_id,
-        p_available_delta: item.quantity,
-        p_reserved_delta: -item.quantity,
-        p_consumed_delta: 0,
-        p_total_delta: 0,
+      await this._consumeForecast(quotationId, item.product_id, item.quantity, deliveryDateISO)
+      await this._bumpInventoryAggregate(item.product_id, {
+        available_delta: -item.quantity,
+        reserved_delta:   item.quantity,
+        consumed_delta:   0,
       })
-      if (error) throw new AppError('DB_ERROR', `Failed to release inventory for product ${item.product_id}: ${error.message}`, 500)
     }
   },
 
-  /** Consume inventory (on finalise): reserved → consumed, total −N */
-  async consumeInventory(items: Array<{ product_id: string; quantity: number }>): Promise<void> {
+  /** Release inventory on reject / cancel — revert all consumption for this quotation */
+  async releaseInventory(
+    quotationId: string,
+    items: Array<{ product_id: string; quantity: number }>
+  ): Promise<void> {
+    await this._revertConsumption(quotationId)
     for (const item of items) {
-      const { error } = await supabase.rpc('adjust_inventory', {
-        p_product_id: item.product_id,
-        p_available_delta: 0,
-        p_reserved_delta: -item.quantity,
-        p_consumed_delta: item.quantity,
-        p_total_delta: -item.quantity,
+      await this._bumpInventoryAggregate(item.product_id, {
+        available_delta:  item.quantity,
+        reserved_delta:  -item.quantity,
+        consumed_delta:   0,
       })
-      if (error) throw new AppError('DB_ERROR', `Failed to consume inventory for product ${item.product_id}: ${error.message}`, 500)
+    }
+  },
+
+  /**
+   * Finalise (approved → finalised): inventory has already been removed from
+   * forecasts when the quotation was created. Just shift the aggregate from
+   * reserved to consumed. Forecast rows and consumption audit are untouched.
+   */
+  async consumeInventory(
+    items: Array<{ product_id: string; quantity: number }>
+  ): Promise<void> {
+    for (const item of items) {
+      await this._bumpInventoryAggregate(item.product_id, {
+        available_delta:  0,
+        reserved_delta:  -item.quantity,
+        consumed_delta:   item.quantity,
+      })
     }
   },
 
@@ -238,30 +394,35 @@ export const quotationRepository = {
     if (error) throw new AppError('DB_ERROR', error.message, 500)
   },
 
-  /** Delta-adjust inventory when a draft is re-saved with changed quantities */
+  /**
+   * Re-reserve inventory when a draft is re-saved with changed items.
+   * Strategy: full revert of old consumption, then fresh consume of new items.
+   * Simpler and less error-prone than computing per-product deltas.
+   */
   async adjustInventoryDelta(
+    quotationId: string,
+    deliveryDateISO: string,
     oldItems: Array<{ product_id: string; quantity: number }>,
     newItems: Array<{ product_id: string; quantity: number }>
   ): Promise<void> {
-    const oldMap: Record<string, number> = {}
-    const newMap: Record<string, number> = {}
-    for (const i of oldItems) oldMap[i.product_id] = (oldMap[i.product_id] ?? 0) + i.quantity
-    for (const i of newItems) newMap[i.product_id] = (newMap[i.product_id] ?? 0) + i.quantity
-
-    const allProductIds = new Set([...Object.keys(oldMap), ...Object.keys(newMap)])
-    for (const pid of allProductIds) {
-      const oldQty = oldMap[pid] ?? 0
-      const newQty = newMap[pid] ?? 0
-      const delta = newQty - oldQty
-      if (delta === 0) continue
-      const { error } = await supabase.rpc('adjust_inventory', {
-        p_product_id: pid,
-        p_available_delta: -delta,
-        p_reserved_delta: delta,
-        p_consumed_delta: 0,
-        p_total_delta: 0,
+    // 1. Revert old consumption (no-op if oldItems is empty, e.g. for re-opened rejected)
+    await this._revertConsumption(quotationId)
+    // 2. Undo old aggregate
+    for (const i of oldItems) {
+      await this._bumpInventoryAggregate(i.product_id, {
+        available_delta:  i.quantity,
+        reserved_delta:  -i.quantity,
+        consumed_delta:   0,
       })
-      if (error) throw new AppError('DB_ERROR', `Failed to adjust inventory for product ${pid}: ${error.message}`, 500)
+    }
+    // 3. Re-consume from scratch for new items
+    for (const i of newItems) {
+      await this._consumeForecast(quotationId, i.product_id, i.quantity, deliveryDateISO)
+      await this._bumpInventoryAggregate(i.product_id, {
+        available_delta: -i.quantity,
+        reserved_delta:   i.quantity,
+        consumed_delta:   0,
+      })
     }
   },
 }

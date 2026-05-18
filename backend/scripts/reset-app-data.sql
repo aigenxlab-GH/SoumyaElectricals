@@ -16,6 +16,7 @@ BEGIN;
   -- ── 1. Wipe transactional + user data (FK-safe order) ───────────────────
   DELETE FROM payrolls;
   DELETE FROM salary_history;
+  DELETE FROM quotation_item_consumption;   -- V30: forecast audit rows
   DELETE FROM quotation_items;
   DELETE FROM quotations;
   DELETE FROM inventory_forecast;
@@ -34,9 +35,10 @@ BEGIN;
   DELETE FROM auth.users;
 
   -- ── 2. Reset sequences ──────────────────────────────────────────────────
+  ALTER SEQUENCE employee_id_seq    RESTART WITH 5001;
   ALTER SEQUENCE product_code_seq   RESTART WITH 1;
   ALTER SEQUENCE quotation_code_seq RESTART WITH 1;
-  ALTER SEQUENCE employee_id_seq    RESTART WITH 5001;
+  ALTER SEQUENCE offer_code_seq     RESTART WITH 1;   -- V33
 
   -- ── 3. Create Owner via DO block (so we can reuse one UUID across 4 tables) ─
   DO $$
@@ -141,8 +143,9 @@ SELECT 'users (excl owner)'   AS table_name, COUNT(*) FROM public.users WHERE em
 UNION ALL SELECT 'products',           COUNT(*) FROM products
 UNION ALL SELECT 'inventory',          COUNT(*) FROM inventory
 UNION ALL SELECT 'inventory_forecast', COUNT(*) FROM inventory_forecast
-UNION ALL SELECT 'quotations',         COUNT(*) FROM quotations
-UNION ALL SELECT 'quotation_items',    COUNT(*) FROM quotation_items
+UNION ALL SELECT 'quotations',              COUNT(*) FROM quotations
+UNION ALL SELECT 'quotation_items',         COUNT(*) FROM quotation_items
+UNION ALL SELECT 'quotation_item_consump',  COUNT(*) FROM quotation_item_consumption
 UNION ALL SELECT 'timecards',          COUNT(*) FROM timecards
 UNION ALL SELECT 'leaves',             COUNT(*) FROM leaves
 UNION ALL SELECT 'overtime',           COUNT(*) FROM overtime

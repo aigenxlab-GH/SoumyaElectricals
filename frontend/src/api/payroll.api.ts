@@ -1,6 +1,6 @@
 import { apiClient } from './client'
 import type {
-  GeneratePayrollDto, Payroll, PayrollListRow, ProcessPayrollDto,
+  GeneratePayrollDto, Payroll, PayrollListRow,
 } from '@soumya/shared'
 
 export const payrollApi = {
@@ -38,10 +38,6 @@ export const payrollApi = {
   },
   async generate(dto: GeneratePayrollDto): Promise<Payroll> {
     const { data } = await apiClient.post<{ data: Payroll }>('/payroll/generate', dto)
-    return data.data
-  },
-  async process(id: string, dto: ProcessPayrollDto): Promise<Payroll> {
-    const { data } = await apiClient.post<{ data: Payroll }>(`/payroll/${id}/process`, dto)
     return data.data
   },
   async remove(id: string): Promise<void> {

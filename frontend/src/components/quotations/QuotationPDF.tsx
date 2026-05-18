@@ -181,8 +181,13 @@ export function QuotationPDF({ quotation, company }: Props) {
             {company.company_website && <Text style={styles.companyContact}>{company.company_website}</Text>}
           </View>
           <View style={styles.headerRight}>
-            <Text style={styles.quotationTitle}>{quotation.status === 'finalised' ? 'OFFER' : 'QUOTATION'}</Text>
-            <Text style={styles.quotationCode}>{quotation.quotation_code}</Text>
+            <Text style={styles.quotationTitle}>{quotation.offer_code ? 'OFFER' : 'QUOTATION'}</Text>
+            {quotation.offer_code && (
+              <Text style={[styles.quotationCode, { fontSize: 12, color: '#6ee7b7' }]}>{quotation.offer_code}</Text>
+            )}
+            <Text style={quotation.offer_code ? [styles.quotationCode, { fontSize: 8, color: '#93c5fd' }] : styles.quotationCode}>
+              {quotation.quotation_code}
+            </Text>
             <Text style={styles.quotationDate}>Date: {fmt(quotation.quotation_date)}</Text>
             <Text style={styles.quotationDate}>Delivery: {fmt(quotation.delivery_date)}</Text>
           </View>

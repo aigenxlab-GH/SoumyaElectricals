@@ -65,3 +65,16 @@ export function useUpdateUser(id: string) {
     },
   })
 }
+
+/** Inline activate / deactivate without navigating to the Edit page */
+export function useSetUserActive() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      usersApi.update(id, { is_active }),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: keys.list() })
+      qc.invalidateQueries({ queryKey: keys.detail(id) })
+    },
+  })
+}

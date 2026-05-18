@@ -14,7 +14,10 @@ import { parseApiError } from '../../utils/api-error'
 import { useUsers, useReportableUsers, useMyManager } from '../../hooks/useUsers'
 import type { Quotation, QuotationStatus, QuotationListParams } from '@soumya/shared'
 
-const STATUS_OPTIONS: QuotationStatus[] = ['draft', 'requested', 'approved', 'rejected', 'finalised', 'cancelled']
+// 'finalised' is excluded from the Quotation tab — finalised records live in the Offer tab only
+const STATUS_OPTIONS: QuotationStatus[] = ['draft', 'requested', 'approved', 'rejected', 'cancelled']
+// When 'All' is selected in the Quotation tab, we still exclude finalised
+const ALL_QUOTATION_STATUSES: QuotationStatus[] = STATUS_OPTIONS
 const LIMIT = 25
 
 const chip = (active: boolean) =>
@@ -79,7 +82,13 @@ export default function QuotationList({ offerMode = false }: { offerMode?: boole
   }, [user, allUsers, team, myManager])
 
   const queryParams: QuotationListParams = {
-    status:    queueMode ? 'requested' : (selectedStatuses.size > 0 ? Array.from(selectedStatuses) : undefined),
+    status: offerMode
+      ? ['finalised']
+      : queueMode
+        ? 'requested'
+        : selectedStatuses.size > 0
+          ? Array.from(selectedStatuses)
+          : ALL_QUOTATION_STATUSES,   // Quotation tab 'All' = all non-finalised statuses
     createdBy: queueMode ? undefined : (createdByFilter || undefined),
     search:    search || undefined,
     dateFrom:  queueMode ? undefined : dateFrom,
@@ -328,7 +337,7 @@ export default function QuotationList({ offerMode = false }: { offerMode?: boole
         {/* Search */}
         <input
           type="text"
-          placeholder="Search client / quotation ID…"
+          placeholder={offerMode ? 'Search client / offer ID…' : 'Search client / quotation ID…'}
           value={search}
           onChange={(e) => applySearch(e.target.value)}
           className="ml-auto border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
@@ -347,13 +356,14 @@ export default function QuotationList({ offerMode = false }: { offerMode?: boole
                 <thead className="bg-gray-50">
                   <tr>
                     {[
+                      ...(offerMode ? [{ key: 'offer_code', label: 'Offer ID' }] : []),
                       { key: 'quotation_code',           label: 'Quotation ID' },
                       { key: 'client_name',              label: 'Client Name' },
                       { key: 'quotation_date',            label: 'Date' },
                       { key: 'delivery_date',             label: 'Delivery Date' },
                       { key: 'final_amount',              label: 'Final Amount' },
                       { key: 'creator_name_snapshot',    label: 'Created By' },
-                      { key: 'status',                   label: 'Status' },
+                      ...(!offerMode ? [{ key: 'status', label: 'Status' }] : []),
                     ].map(({ key, label }) => (
                       <th
                         key={key}
@@ -369,6 +379,13 @@ export default function QuotationList({ offerMode = false }: { offerMode?: boole
                 <tbody className="divide-y divide-gray-100">
                   {sorted.map((q) => (
                     <tr key={q.id} className="hover:bg-gray-50">
+                      {offerMode && (
+                        <td className="px-4 py-3">
+                          <Link to={`/quotations/${q.id}`} className="font-mono text-xs font-semibold text-emerald-700 hover:underline">
+                            {q.offer_code ?? '—'}
+                          </Link>
+                        </td>
+                      )}
                       <td className="px-4 py-3">
                         <Link to={`/quotations/${q.id}`} className="font-mono text-xs text-blue-600 hover:underline">{q.quotation_code}</Link>
                       </td>
@@ -380,7 +397,7 @@ export default function QuotationList({ offerMode = false }: { offerMode?: boole
                         <div>{q.creator_name_snapshot}</div>
                         <div className="text-xs text-gray-400 font-mono">{q.creator_employee_id_snapshot}</div>
                       </td>
-                      <td className="px-4 py-3"><QuotationStatusBadge status={q.status} /></td>
+                      {!offerMode && <td className="px-4 py-3"><QuotationStatusBadge status={q.status} /></td>}
                       <td className="px-4 py-3"><ActionButtons q={q} /></td>
                     </tr>
                   ))}

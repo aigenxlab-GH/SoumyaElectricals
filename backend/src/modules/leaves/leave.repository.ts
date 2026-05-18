@@ -5,7 +5,7 @@ import type { Leave, LeaveBalance } from '@soumya/shared'
 export const leaveRepository = {
   async listByMonth(userId: string, year: number, month: number): Promise<Leave[]> {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0]
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`
 
     const { data, error } = await supabase
       .from('leaves')
@@ -71,13 +71,9 @@ export const leaveRepository = {
     return data
   },
 
-  async deductBalance(userId: string, days: number): Promise<void> {
-    const { error } = await supabase.rpc('deduct_leave_balance', { p_user_id: userId, p_days: days })
-    if (error) throw new AppError('DB_ERROR', error.message, 500)
-  },
-
-  async restoreBalance(userId: string, days: number): Promise<void> {
-    const { error } = await supabase.rpc('restore_leave_balance', { p_user_id: userId, p_days: days })
+  /** V26 authoritative balance — recalculates from approved leaves + carryover + write-offs. */
+  async recomputeBalance(userId: string): Promise<void> {
+    const { error } = await supabase.rpc('recompute_leave_balance', { p_user_id: userId })
     if (error) throw new AppError('DB_ERROR', error.message, 500)
   },
 

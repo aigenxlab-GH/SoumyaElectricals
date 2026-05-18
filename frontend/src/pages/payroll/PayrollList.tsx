@@ -11,21 +11,12 @@ import {
 } from '../../hooks/usePayrolls'
 import { parseApiError } from '../../utils/api-error'
 import { formatDate } from '../../utils/date-utils'
-import type { Payroll, PayrollStatus } from '@soumya/shared'
+import type { Payroll } from '@soumya/shared'
 
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const MONTH_LONG  = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const fmtMoney = (n: number | null | undefined) =>
   n === null || n === undefined ? '—' : `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-
-function StatusBadge({ status }: { status: PayrollStatus }) {
-  const m: Record<PayrollStatus, string> = {
-    draft:     'bg-gray-100 text-gray-700',
-    finalised: 'bg-blue-100 text-blue-700',
-    paid:      'bg-emerald-100 text-emerald-700',
-  }
-  return <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${m[status]}`}>{status}</span>
-}
 
 function buildMonthOptions(): { value: string; label: string; year: number; month: number }[] {
   const now = new Date()
@@ -52,7 +43,7 @@ function HistoryTable({ rows, isLoading }: { rows: Payroll[]; isLoading: boolean
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50">
           <tr>
-            {['Month','Period','Net Pay','Status','Generated','Action'].map((h) => (
+            {['Month','Period','Net Pay','Generated','Action'].map((h) => (
               <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
             ))}
           </tr>
@@ -63,7 +54,6 @@ function HistoryTable({ rows, isLoading }: { rows: Payroll[]; isLoading: boolean
               <td className="px-4 py-2.5 font-medium text-gray-900">{MONTH_SHORT[p.period_month - 1]} {p.period_year}</td>
               <td className="px-4 py-2.5 text-xs text-gray-500">{formatDate(p.period_start)} – {formatDate(p.period_end)}</td>
               <td className="px-4 py-2.5 font-medium text-gray-800">{fmtMoney(p.net_pay)}</td>
-              <td className="px-4 py-2.5"><StatusBadge status={p.status} /></td>
               <td className="px-4 py-2.5 text-xs text-gray-500">{formatDate(p.generated_at)}</td>
               <td className="px-4 py-2.5">
                 <Link to={`/payroll/${p.id}`} className="text-xs text-blue-600 hover:underline">View / PDF</Link>
@@ -232,7 +222,7 @@ export default function PayrollList() {
           <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm flex items-center justify-between">
             <div>
               <div className="text-blue-900 font-medium">
-                Already exists for {selectedMonth.label}{'  '}<StatusBadge status={lookup.data.status} />
+                Already exists for {selectedMonth.label}
               </div>
               <p className="text-xs text-blue-700 mt-0.5">Net Pay: <strong>{fmtMoney(lookup.data.net_pay)}</strong></p>
             </div>
@@ -312,7 +302,7 @@ function EmployeeSelfView({ userId }: { userId: string }) {
           <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm flex items-center justify-between">
             <div>
               <div className="text-blue-900 font-medium">
-                Payslip ready for {selectedMonth.label}{'  '}<StatusBadge status={lookup.data.status} />
+                Payslip ready for {selectedMonth.label}
               </div>
               <p className="text-xs text-blue-700 mt-0.5">Net Pay: <strong>{fmtMoney(lookup.data.net_pay)}</strong></p>
             </div>

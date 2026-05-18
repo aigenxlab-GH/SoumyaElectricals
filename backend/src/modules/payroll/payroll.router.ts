@@ -4,7 +4,7 @@ import { authenticate } from '../../middleware/authenticate'
 import { roleGuard } from '../../middleware/role-guard'
 import { forcePasswordChange } from '../../middleware/force-password-change'
 import { validate } from '../../middleware/validate'
-import { GeneratePayrollSchema, ProcessPayrollSchema } from '@soumya/shared'
+import { GeneratePayrollSchema } from '@soumya/shared'
 
 const router = Router()
 
@@ -21,7 +21,6 @@ router.get('/:id',                 payrollController.getById)         // any rol
 
 router.post('/generate',        writers, validate(GeneratePayrollSchema), payrollController.generate)
 router.post('/bulk-generate',   writers, payrollController.bulkGenerate)
-router.post('/:id/process',     writers, validate(ProcessPayrollSchema), payrollController.process)
 router.delete('/:id',           writers, payrollController.remove)
 
 export default router

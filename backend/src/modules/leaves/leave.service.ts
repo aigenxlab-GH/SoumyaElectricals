@@ -42,7 +42,8 @@ export const leaveService = {
     }
 
     const created = await leaveRepository.insertMany(user.id, [dto.date], dto.reason)
-    await leaveRepository.deductBalance(user.id, 1)
+    // Recompute (V26 model) — balance reflects approved leaves, not applied.
+    await leaveRepository.recomputeBalance(user.id)
     return created[0]
   },
 
@@ -62,7 +63,7 @@ export const leaveService = {
     }
 
     const created = await leaveRepository.insertMany(user.id, newDates, dto.reason)
-    await leaveRepository.deductBalance(user.id, newDates.length)
+    await leaveRepository.recomputeBalance(user.id)
 
     return { created, skipped, conflictingTimecards: existingTimecards.length }
   },
@@ -87,6 +88,6 @@ export const leaveService = {
       throw new AppError('UNEDITABLE', 'Cannot delete an approved leave', 400)
     }
     await leaveRepository.delete(id)
-    await leaveRepository.restoreBalance(user.id, 1)
+    await leaveRepository.recomputeBalance(user.id)
   },
 }

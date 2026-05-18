@@ -2,7 +2,7 @@ import { supabase } from '../../lib/supabase'
 import { AppError } from '../../types'
 import type { Payroll } from '@soumya/shared'
 
-type PayrollInsert = Omit<Payroll, 'id' | 'generated_at' | 'updated_at' | 'finalised_at' | 'paid_at'>
+type PayrollInsert = Omit<Payroll, 'id' | 'generated_at' | 'updated_at'>
 
 export const payrollRepository = {
   async findByUserAndPeriod(userId: string, year: number, month: number): Promise<Payroll | null> {
@@ -60,22 +60,6 @@ export const payrollRepository = {
       .select()
       .single()
     if (error || !data) throw new AppError('DB_ERROR', error?.message ?? 'Failed to save payroll', 500)
-    return data
-  },
-
-  async updateStatus(id: string, status: 'draft' | 'finalised' | 'paid'): Promise<Payroll> {
-    const patch: Record<string, unknown> = { status, updated_at: new Date().toISOString() }
-    if (status === 'finalised') patch.finalised_at = new Date().toISOString()
-    if (status === 'paid')      patch.paid_at      = new Date().toISOString()
-    if (status === 'draft')     { patch.finalised_at = null; patch.paid_at = null }
-
-    const { data, error } = await supabase
-      .from('payrolls')
-      .update(patch)
-      .eq('id', id)
-      .select()
-      .single()
-    if (error || !data) throw new AppError('DB_ERROR', error?.message ?? 'Failed to update status', 500)
     return data
   },
 
@@ -142,5 +126,20 @@ export const payrollRepository = {
       .maybeSingle()
     if (error) throw new AppError('DB_ERROR', error.message, 500)
     return data?.remaining ?? 0
+  },
+
+  /** Full leave balance row — total_credited is used for payroll LOP calculation. */
+  async getLeaveBalance(userId: string): Promise<{ total_credited: number; used: number; remaining: number }> {
+    const { data, error } = await supabase
+      .from('leave_balance')
+      .select('total_credited, used, remaining')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (error) throw new AppError('DB_ERROR', error.message, 500)
+    return {
+      total_credited: Number(data?.total_credited ?? 0),
+      used:           Number(data?.used           ?? 0),
+      remaining:      Number(data?.remaining       ?? 0),
+    }
   },
 }

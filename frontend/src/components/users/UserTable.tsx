@@ -6,7 +6,7 @@ import { Paginator } from '../../common/Paginator'
 import { usePagination } from '../../common/usePagination'
 import { useSorting } from '../../common/useSorting'
 import { SortableHeader } from '../../common/SortableHeader'
-import { useResetPassword, useDeleteUser } from '../../hooks/useUsers'
+import { useResetPassword, useDeleteUser, useSetUserActive } from '../../hooks/useUsers'
 import { useAuthStore } from '../../store/auth.store'
 import { parseApiError } from '../../utils/api-error'
 import type { User } from '../../types/models'
@@ -30,11 +30,32 @@ function RoleBadge({ role }: { role: User['role'] }) {
 
 export function UserTable({ users }: Props) {
   const { user: currentUser } = useAuthStore()
-  const resetPassword = useResetPassword()
-  const deleteUser   = useDeleteUser()
-  const [confirmReset, setConfirmReset] = useState<User | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState<User | null>(null)
+  const resetPassword  = useResetPassword()
+  const deleteUser     = useDeleteUser()
+  const setUserActive  = useSetUserActive()
+  const [confirmReset, setConfirmReset]       = useState<User | null>(null)
+  const [confirmDelete, setConfirmDelete]     = useState<User | null>(null)
+  const [confirmToggle, setConfirmToggle]     = useState<User | null>(null)   // activate / deactivate
   const [resetResult, setResetResult] = useState<{ ok: boolean; message: string } | null>(null)
+
+  function handleToggleConfirm() {
+    if (!confirmToggle) return
+    const target = confirmToggle
+    const newActive = !target.is_active
+    setUserActive.mutate({ id: target.id, is_active: newActive }, {
+      onSuccess: () => {
+        setConfirmToggle(null)
+        setResetResult({
+          ok: true,
+          message: `${target.full_name} (${target.employee_id}) has been ${newActive ? 'activated' : 'deactivated'}.`,
+        })
+      },
+      onError: (err) => {
+        setConfirmToggle(null)
+        setResetResult({ ok: false, message: parseApiError(err) ?? 'Failed to update user status' })
+      },
+    })
+  }
 
   function handleDeleteConfirm() {
     if (!confirmDelete) return
@@ -143,6 +164,31 @@ export function UserTable({ users }: Props) {
                       >
                         Edit
                       </Link>
+
+                      {/* Activate / Deactivate — not for self */}
+                      {currentUser?.id !== user.id && (
+                        user.is_active ? (
+                          <button
+                            onClick={() => setConfirmToggle(user)}
+                            disabled={setUserActive.isPending}
+                            title="Deactivate this user — they won't be able to log in"
+                            className="text-xs px-3 py-1.5 border border-orange-300 text-orange-700 rounded-lg hover:bg-orange-50 font-medium transition-colors disabled:opacity-50"
+                          >
+                            Deactivate
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmToggle(user)}
+                            disabled={setUserActive.isPending}
+                            title="Re-activate this user so they can log in again"
+                            className="text-xs px-3 py-1.5 border border-green-300 text-green-700 rounded-lg hover:bg-green-50 font-medium transition-colors disabled:opacity-50"
+                          >
+                            Activate
+                          </button>
+                        )
+                      )}
+
+                      {/* Reset Password — not for self */}
                       {currentUser?.id !== user.id && (
                         <button
                           onClick={() => setConfirmReset(user)}
@@ -150,9 +196,11 @@ export function UserTable({ users }: Props) {
                           title="Reset this user's password back to the default"
                           className="text-xs px-3 py-1.5 border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 font-medium transition-colors disabled:opacity-50"
                         >
-                          Reset Password
+                          Reset Pwd
                         </button>
                       )}
+
+                      {/* Delete — only for inactive users, not for self */}
                       {currentUser?.id !== user.id && !user.is_active && (
                         <button
                           onClick={() => setConfirmDelete(user)}
@@ -175,6 +223,22 @@ export function UserTable({ users }: Props) {
         total={total} rangeStart={rangeStart} rangeEnd={rangeEnd}
         onPageChange={setPage} onPageSizeChange={setPageSize}
       />
+
+      {/* Activate / Deactivate — confirmation dialog */}
+      {confirmToggle && (
+        <ConfirmDialog
+          title={confirmToggle.is_active ? 'Deactivate user?' : 'Activate user?'}
+          description={
+            confirmToggle.is_active
+              ? `${confirmToggle.full_name} (${confirmToggle.employee_id}) will no longer be able to log in. Their records are kept intact. You can re-activate them any time.`
+              : `${confirmToggle.full_name} (${confirmToggle.employee_id}) will regain access and be able to log in again.`
+          }
+          confirmLabel={confirmToggle.is_active ? 'Yes, Deactivate' : 'Yes, Activate'}
+          isLoading={setUserActive.isPending}
+          onConfirm={handleToggleConfirm}
+          onCancel={() => setConfirmToggle(null)}
+        />
+      )}
 
       {/* Reset Password — confirmation dialog */}
       {confirmReset && (
@@ -207,7 +271,7 @@ export function UserTable({ users }: Props) {
             <div className="flex items-start gap-3">
               <span className="text-lg leading-none mt-0.5">{resetResult.ok ? '✓' : '⚠'}</span>
               <div className="flex-1">
-                <p className="text-sm font-semibold mb-0.5">{resetResult.ok ? 'Password reset' : 'Reset failed'}</p>
+                <p className="text-sm font-semibold mb-0.5">{resetResult.ok ? 'Done' : 'Error'}</p>
                 <p className="text-xs">{resetResult.message}</p>
               </div>
               <button onClick={() => setResetResult(null)} className="text-current opacity-50 hover:opacity-100 text-sm">✕</button>

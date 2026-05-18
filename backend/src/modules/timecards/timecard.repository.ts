@@ -5,7 +5,7 @@ import type { Timecard } from '@soumya/shared'
 export const timecardRepository = {
   async listByMonth(userId: string, year: number, month: number): Promise<Timecard[]> {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0]
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`
 
     const { data, error } = await supabase
       .from('timecards')
@@ -78,7 +78,7 @@ export const timecardRepository = {
 
   async listByManagerScope(managerId: string, year: number, month: number): Promise<Timecard[]> {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0]
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`
 
     const { data, error } = await supabase
       .from('timecards')

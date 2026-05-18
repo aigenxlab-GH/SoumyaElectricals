@@ -87,7 +87,7 @@ export default function QuotationDetail() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${quotation.quotation_code}.pdf`
+      a.download = `${quotation.offer_code ?? quotation.quotation_code}.pdf`
       a.click()
       URL.revokeObjectURL(url)
     } catch (err) {
@@ -108,9 +108,17 @@ export default function QuotationDetail() {
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/quotations')} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
           <div>
+            {quotation.offer_code && (
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-lg font-bold text-emerald-700 font-mono">{quotation.offer_code}</span>
+                <QuotationStatusBadge status={quotation.status} large />
+              </div>
+            )}
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold text-gray-900 font-mono">{quotation.quotation_code}</h1>
-              <QuotationStatusBadge status={quotation.status} large />
+              <h1 className={`font-semibold font-mono ${quotation.offer_code ? 'text-base text-gray-500' : 'text-xl text-gray-900'}`}>
+                {quotation.quotation_code}
+              </h1>
+              {!quotation.offer_code && <QuotationStatusBadge status={quotation.status} large />}
             </div>
             <p className="text-sm text-gray-500 mt-0.5">Date: {fmt(quotation.quotation_date)}</p>
           </div>

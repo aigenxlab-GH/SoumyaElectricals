@@ -5,7 +5,7 @@ import type { Overtime } from '@soumya/shared'
 export const overtimeRepository = {
   async listByMonth(userId: string, year: number, month: number): Promise<Overtime[]> {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0]
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`
 
     const { data, error } = await supabase
       .from('overtime')

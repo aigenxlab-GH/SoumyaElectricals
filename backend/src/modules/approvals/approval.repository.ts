@@ -88,12 +88,16 @@ export const approvalRepository = {
   async approveLeave(id: string): Promise<Leave> {
     const { data, error } = await supabase.rpc('approve_leave', { p_leave_id: id })
     if (error || !data) throw new AppError('CONFLICT', 'Leave already processed or not found', 409)
+    // V26: recompute balance so approved-leaves count drives used/remaining
+    await supabase.rpc('recompute_leave_balance', { p_user_id: data.user_id })
     return data
   },
 
   async rejectLeave(id: string): Promise<Leave> {
     const { data, error } = await supabase.rpc('reject_leave', { p_leave_id: id })
     if (error || !data) throw new AppError('CONFLICT', 'Leave already processed or not found', 409)
+    // V26: recompute overrides the V5-era manual restore done inside reject_leave RPC
+    await supabase.rpc('recompute_leave_balance', { p_user_id: data.user_id })
     return data
   },
 

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { payrollApi } from '../api/payroll.api'
-import type { GeneratePayrollDto, ProcessPayrollDto } from '@soumya/shared'
+import type { GeneratePayrollDto } from '@soumya/shared'
 
 const keys = {
   all:    () => ['payroll'] as const,
@@ -54,17 +54,6 @@ export function useGeneratePayroll() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (dto: GeneratePayrollDto) => payrollApi.generate(dto),
-    onSuccess: (p) => {
-      qc.invalidateQueries({ queryKey: keys.all() })
-      qc.invalidateQueries({ queryKey: keys.detail(p.id) })
-    },
-  })
-}
-
-export function useProcessPayroll() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, dto }: { id: string; dto: ProcessPayrollDto }) => payrollApi.process(id, dto),
     onSuccess: (p) => {
       qc.invalidateQueries({ queryKey: keys.all() })
       qc.invalidateQueries({ queryKey: keys.detail(p.id) })

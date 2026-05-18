@@ -1,5 +1,6 @@
 export function isSunday(dateStr: string): boolean {
-  return new Date(dateStr).getDay() === 0
+  // Parse at noon UTC so getUTCDay() is always the correct calendar day in any timezone
+  return new Date(dateStr + 'T12:00:00Z').getUTCDay() === 0
 }
 
 export function isHoliday(dateStr: string, holidays: string[]): boolean {
@@ -16,15 +17,16 @@ export function expandDateRange(
   holidays: string[] = []
 ): string[] {
   const dates: string[] = []
-  const current = new Date(startDate)
-  const end = new Date(endDate)
+  // Use UTC noon to stay safely within the same calendar day in any timezone
+  const current = new Date(startDate + 'T12:00:00Z')
+  const end = new Date(endDate + 'T12:00:00Z')
 
   while (current <= end) {
     const dateStr = current.toISOString().split('T')[0]
     if (isValidWorkDate(dateStr, holidays)) {
       dates.push(dateStr)
     }
-    current.setDate(current.getDate() + 1)
+    current.setUTCDate(current.getUTCDate() + 1)
   }
 
   return dates

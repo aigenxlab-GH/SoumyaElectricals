@@ -63,15 +63,6 @@ const styles = StyleSheet.create({
   footerText: { fontSize: 7, color: '#9ca3af' },
 })
 
-function statusStyle(status: string) {
-  const map: Record<string, { bg: string; text: string }> = {
-    draft:     { bg: '#f3f4f6', text: '#374151' },
-    finalised: { bg: '#dbeafe', text: '#1e40af' },
-    paid:      { bg: '#d1fae5', text: '#065f46' },
-  }
-  return map[status] ?? { bg: '#f3f4f6', text: '#374151' }
-}
-
 const fmtMoney = (n: number) =>
   'Rs. ' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
@@ -83,8 +74,6 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 interface Props { payroll: Payroll; company: CompanyBranding }
 
 export function PayrollPDF({ payroll, company }: Props) {
-  const { bg, text: textColor } = statusStyle(payroll.status)
-  const statusLabel = payroll.status.charAt(0).toUpperCase() + payroll.status.slice(1)
   const brandUpper = (company.brand_name || '').toUpperCase()
   const contactLine = [company.company_phone, company.company_email].filter(Boolean).join(' | ')
 
@@ -115,10 +104,6 @@ export function PayrollPDF({ payroll, company }: Props) {
           </View>
         </View>
 
-        <View style={styles.statusRow}>
-          <Text style={[styles.statusBadge, { backgroundColor: bg, color: textColor }]}>{statusLabel}</Text>
-        </View>
-
         {/* Employee block */}
         <View style={styles.sectionRow}>
           <View style={styles.sectionBox}>
@@ -135,19 +120,19 @@ export function PayrollPDF({ payroll, company }: Props) {
             <Text style={styles.sectionTitle}>Pay Summary</Text>
             <Text style={styles.fieldLabel}>Monthly Salary (CTC base)</Text>
             <Text style={styles.fieldValue}>{fmtMoney(payroll.monthly_salary)}</Text>
-            <Text style={styles.fieldLabel}>Per-Day Rate</Text>
-            <Text style={styles.fieldValue}>{fmtMoney(payroll.per_day_rate)}</Text>
-            <Text style={styles.fieldLabel}>Working Days (Period)</Text>
-            <Text style={styles.fieldValue}>{payroll.effective_working_days} of {payroll.full_period_working_days}</Text>
+            <Text style={styles.fieldLabel}>Working Days</Text>
+            <Text style={styles.fieldValue}>{payroll.full_period_working_days}</Text>
           </View>
         </View>
 
         {/* Attendance cells */}
         <View style={styles.attTable}>
           <View style={styles.attCell}><Text style={styles.attLabel}>Present</Text><Text style={styles.attValue}>{payroll.present_days}</Text></View>
-          <View style={styles.attCell}><Text style={styles.attLabel}>Paid Leave</Text><Text style={styles.attValue}>{payroll.paid_leave_days}</Text></View>
-          <View style={styles.attCell}><Text style={styles.attLabel}>Absent</Text><Text style={styles.attValue}>{payroll.unpaid_absent_days}</Text></View>
-          <View style={styles.attCell}><Text style={styles.attLabel}>LOP (Leave)</Text><Text style={styles.attValue}>{payroll.lop_from_writeoff_days}</Text></View>
+          <View style={styles.attCell}><Text style={styles.attLabel}>Paid Leave</Text><Text style={styles.attValue}>{payroll.paid_leaves_within_balance}</Text></View>
+          <View style={styles.attCell}><Text style={styles.attLabel}>Unpaid Leave</Text><Text style={styles.attValue}>{payroll.unpaid_leaves_lop}</Text></View>
+          {payroll.unpaid_absent_days > 0 && (
+            <View style={styles.attCell}><Text style={styles.attLabel}>Absent</Text><Text style={styles.attValue}>{payroll.unpaid_absent_days}</Text></View>
+          )}
           <View style={styles.attCellLast}><Text style={styles.attLabel}>OT (hrs)</Text><Text style={styles.attValue}>{Number(payroll.overtime_hours).toFixed(1)}</Text></View>
         </View>
 
@@ -156,7 +141,19 @@ export function PayrollPDF({ payroll, company }: Props) {
           <View style={styles.block}>
             <Text style={styles.blockTitle}>Earnings</Text>
             <View style={styles.blockRow}>
-              <Text style={styles.blockLabel}>Earned Salary ({payroll.present_days + payroll.paid_leave_days} days × {fmtMoney(payroll.per_day_rate)})</Text>
+              <Text style={styles.blockLabel}>Monthly Salary</Text>
+              <Text style={styles.blockValue}>{fmtMoney(payroll.monthly_salary)}</Text>
+            </View>
+            <View style={styles.blockRowAlt}>
+              <Text style={styles.blockLabel}>Per Day Salary</Text>
+              <Text style={styles.blockValue}>{fmtMoney(payroll.per_day_rate)}</Text>
+            </View>
+            <View style={styles.blockRow}>
+              <Text style={styles.blockLabel}>Less: LOP ({payroll.total_lop_days} × {fmtMoney(payroll.per_day_rate)})</Text>
+              <Text style={styles.blockValue}>− {fmtMoney(payroll.lop_deduction)}</Text>
+            </View>
+            <View style={styles.blockRow}>
+              <Text style={styles.blockLabel}>Earned Salary</Text>
               <Text style={styles.blockValue}>{fmtMoney(payroll.earned_salary)}</Text>
             </View>
             <View style={styles.blockRowAlt}>

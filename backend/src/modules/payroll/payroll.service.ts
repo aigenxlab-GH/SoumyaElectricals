@@ -5,7 +5,7 @@ import { userRepository } from '../users/user.repository'
 import { AppError } from '../../types'
 import type { AuthUser } from '../../types'
 import type {
-  GeneratePayrollDto, Payroll, PayrollListRow, ProcessPayrollDto, User,
+  GeneratePayrollDto, Payroll, PayrollListRow, User,
 } from '@soumya/shared'
 
 // ── Period helpers ──────────────────────────────────────────────────────────
@@ -23,11 +23,12 @@ export function computePeriod(year: number, month: number): { start: string; end
 
 function dateRangeAsArray(start: string, end: string): string[] {
   const out: string[] = []
-  const cur = new Date(start + 'T00:00:00')
-  const stop = new Date(end + 'T00:00:00')
+  // Parse as UTC noon to avoid any local-timezone day-shift when converting back
+  const cur = new Date(start + 'T12:00:00Z')
+  const stop = new Date(end + 'T12:00:00Z')
   while (cur <= stop) {
     out.push(cur.toISOString().split('T')[0])
-    cur.setDate(cur.getDate() + 1)
+    cur.setUTCDate(cur.getUTCDate() + 1)
   }
   return out
 }
@@ -184,19 +185,41 @@ export const payrollService = {
 
     const unpaidAbsent = Math.max(0, effectiveWorking - presentDays - paidLeaveDays)
 
-    // 3. Loss-of-pay from V26 leave write-off — period-end snapshot.
-    // Recompute leave_balance first so it reflects this user's current state, then read remaining.
+    // 3. LOP = approved leaves in this period that exceed the remaining annual credit.
+    // Strategy: use total_credited (annual budget) vs cumulative approved leaves — this is
+    // immune to V26 write-off timing which would incorrectly zero out LOP when payroll is
+    // generated a month after the deficit period.
     try { await supabase.rpc('recompute_leave_balance', { p_user_id: dto.user_id }) } catch { /* non-fatal */ }
-    const remaining = await payrollRepository.getRemainingLeaveBalance(dto.user_id)
-    const lopFromWriteoff = Math.max(0, -remaining)
 
-    const totalLopDays = unpaidAbsent + lopFromWriteoff
+    const yearStart = `${dto.period_year}-01-01`
+    const prevPeriodEnd = dto.period_month === 1 ? null : (() => {
+      const pm      = dto.period_month - 1
+      const lastDay = new Date(Date.UTC(dto.period_year, pm, 0)).getUTCDate()
+      return `${dto.period_year}-${pad2(pm)}-${pad2(lastDay)}`
+    })()
+
+    const [leaveBalance, totalApprovedBeforePeriod] = await Promise.all([
+      payrollRepository.getLeaveBalance(dto.user_id),
+      prevPeriodEnd
+        ? payrollRepository.countApprovedLeavesInRange(dto.user_id, yearStart, prevPeriodEnd)
+        : Promise.resolve(0),
+    ])
+
+    // How many annual credits remain at the START of this period
+    const availableForPeriod     = Math.max(0, leaveBalance.total_credited - totalApprovedBeforePeriod)
+    const lopFromBalance         = Math.max(0, paidLeaveDays - availableForPeriod)
+    const paidLeavesWithinBalance = paidLeaveDays - lopFromBalance
+    const unpaidLeavesLop         = lopFromBalance
+    const totalLopDays            = unpaidAbsent + lopFromBalance
 
     // 4. Money math
-    const earnedSalary = round2(perDayRate * (presentDays + paidLeaveDays))
+    //   Full monthly salary is paid for everything except LOP days.
+    //   net = (monthly_salary − per_day × total_lop) + overtime
+    //   Equivalent to current code's earned/lop/gross/net flow.
     const lopDeduction = round2(perDayRate * totalLopDays)
+    const earnedSalary = round2(monthlySalary - lopDeduction)
     const grossPay     = round2(earnedSalary + ot.payout)
-    const netPay       = round2(grossPay - lopDeduction)
+    const netPay       = grossPay
 
     // 5. Snapshot + upsert
     const result = await payrollRepository.upsert({
@@ -208,12 +231,14 @@ export const payrollService = {
       monthly_salary:           monthlySalary,
       full_period_working_days: fullWorkingDays,
       effective_working_days:   effectiveWorking,
-      present_days:             presentDays,
-      paid_leave_days:          paidLeaveDays,
-      unpaid_absent_days:       unpaidAbsent,
+      present_days:                presentDays,
+      paid_leave_days:             paidLeaveDays,
+      paid_leaves_within_balance:  paidLeavesWithinBalance,
+      unpaid_leaves_lop:           unpaidLeavesLop,
+      unpaid_absent_days:          unpaidAbsent,
       overtime_hours:           round2(ot.hours),
       overtime_pay:             round2(ot.payout),
-      lop_from_writeoff_days:   lopFromWriteoff,
+      lop_from_writeoff_days:   0,
       total_lop_days:           totalLopDays,
       per_day_rate:             round2(perDayRate),
       earned_salary:            earnedSalary,
@@ -224,7 +249,6 @@ export const payrollService = {
       employee_id_snapshot:         employee.employee_id,
       employee_role_snapshot:       employee.role,
       employee_join_date_snapshot:  employee.date_of_joining,
-      status:                       'draft',
       generated_by:                 actor.id,
     } as unknown as Parameters<typeof payrollRepository.upsert>[0])
 
@@ -267,26 +291,10 @@ export const payrollService = {
     return { success, failed }
   },
 
-  async process(actor: AuthUser, id: string, dto: ProcessPayrollDto): Promise<Payroll> {
-    const existing = await payrollRepository.findById(id)
-    if (!existing) throw new AppError('NOT_FOUND', 'Payroll not found', 404)
-    await assertWriteAccess(actor, existing.user_id)
-
-    const next: 'draft' | 'finalised' | 'paid' =
-      dto.action === 'finalise'   ? 'finalised' :
-      dto.action === 'mark-paid'  ? 'paid'      :
-      'draft'
-
-    return payrollRepository.updateStatus(id, next)
-  },
-
   async remove(actor: AuthUser, id: string): Promise<void> {
     const existing = await payrollRepository.findById(id)
     if (!existing) throw new AppError('NOT_FOUND', 'Payroll not found', 404)
     await assertWriteAccess(actor, existing.user_id)
-    if (existing.status !== 'draft') {
-      throw new AppError('INVALID_STATUS', 'Only draft payrolls can be deleted', 400)
-    }
     await payrollRepository.deleteById(id)
   },
 }

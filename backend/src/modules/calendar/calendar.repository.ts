@@ -4,7 +4,7 @@ import { AppError } from '../../types'
 export const calendarRepository = {
   async getMonthData(userId: string, year: number, month: number) {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0]
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`
 
     const [timecards, leaves, holidays] = await Promise.all([
       supabase

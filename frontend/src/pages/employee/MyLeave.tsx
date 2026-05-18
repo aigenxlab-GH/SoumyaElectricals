@@ -43,6 +43,7 @@ export default function MyLeave() {
   const approverName = myManager?.full_name ?? 'Owner'
 
   // Local filter state
+  const [showFilters, setShowFilters]   = useState(false)
   const [statusFilter, setStatusFilter] = useState<'all' | 'applied' | 'approved' | 'rejected'>('all')
   const [exactDate, setExactDate] = useState('')
   const [dateFrom, setDateFrom] = useState('')
@@ -69,6 +70,15 @@ export default function MyLeave() {
         <h1 className="text-xl font-semibold text-gray-900">My Leave</h1>
         <div className="flex items-center gap-2">
           <MonthPaginator year={year} month={month} onChange={(y, m) => { setYear(y); setMonth(m) }} />
+          <button
+            onClick={() => setShowFilters((v) => !v)}
+            className={`text-sm px-3 py-1.5 border rounded-md ${showFilters ? 'bg-blue-50 border-blue-400 text-blue-700' : 'border-gray-300 hover:bg-gray-50'}`}
+          >
+            {showFilters ? 'Hide Filters' : 'Filters'}
+            {(statusFilter !== 'all' || exactDate || dateFrom || dateTo) && (
+              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-blue-600 text-white rounded-full">•</span>
+            )}
+          </button>
           <button onClick={() => setForm({ mode: 'bulk' })} className="text-sm px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50">Bulk Apply</button>
           <button onClick={() => setForm({ mode: 'apply' })} className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700">+ Apply</button>
         </div>
@@ -76,38 +86,40 @@ export default function MyLeave() {
 
       {balanceLoading ? <LoadingSpinner /> : balance && <LeaveBalanceWidget balance={balance} monthlyCredit={monthlyCredit} />}
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-end gap-3 bg-white border border-slate-200 rounded-lg p-3">
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-            className="border border-slate-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-            <option value="all">All</option>
-            <option value="applied">Applied</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
+      {/* Filters — toggled by the Filters button in the header */}
+      {showFilters && (
+        <div className="flex flex-wrap items-end gap-3 bg-white border border-slate-200 rounded-lg p-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+              className="border border-slate-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <option value="all">All</option>
+              <option value="applied">Applied</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Date</label>
+            <input type="date" value={exactDate} onChange={(e) => setExactDate(e.target.value)}
+              className="border border-slate-300 rounded-md px-2 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">From</label>
+            <input type="date" value={dateFrom} max={dateTo || undefined} onChange={(e) => setDateFrom(e.target.value)}
+              className="border border-slate-300 rounded-md px-2 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">To</label>
+            <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(e) => setDateTo(e.target.value)}
+              className="border border-slate-300 rounded-md px-2 py-1.5 text-sm" />
+          </div>
+          {(statusFilter !== 'all' || exactDate || dateFrom || dateTo) && (
+            <button onClick={() => { setStatusFilter('all'); setExactDate(''); setDateFrom(''); setDateTo('') }}
+              className="text-xs text-slate-500 hover:text-slate-700 underline">Clear filters</button>
+          )}
         </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Date</label>
-          <input type="date" value={exactDate} onChange={(e) => setExactDate(e.target.value)}
-            className="border border-slate-300 rounded-md px-2 py-1.5 text-sm" />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">From</label>
-          <input type="date" value={dateFrom} max={dateTo || undefined} onChange={(e) => setDateFrom(e.target.value)}
-            className="border border-slate-300 rounded-md px-2 py-1.5 text-sm" />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">To</label>
-          <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(e) => setDateTo(e.target.value)}
-            className="border border-slate-300 rounded-md px-2 py-1.5 text-sm" />
-        </div>
-        {(statusFilter !== 'all' || exactDate || dateFrom || dateTo) && (
-          <button onClick={() => { setStatusFilter('all'); setExactDate(''); setDateFrom(''); setDateTo('') }}
-            className="text-xs text-slate-500 hover:text-slate-700 underline">Clear filters</button>
-        )}
-      </div>
+      )}
 
       {leavesLoading ? <LoadingSpinner /> : (
         <LeaveList

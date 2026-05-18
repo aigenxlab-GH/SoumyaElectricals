@@ -147,6 +147,7 @@ export interface QuotationItem {
 export interface Quotation {
   id: string
   quotation_code: string
+  offer_code: string | null   // set when status transitions to 'finalised'
   client_name: string
   client_phone: string
   client_email: string

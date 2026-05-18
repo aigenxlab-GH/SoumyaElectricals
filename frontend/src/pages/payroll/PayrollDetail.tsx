@@ -2,23 +2,13 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { LoadingSpinner } from '../../common/LoadingSpinner'
 import { ConfirmDialog } from '../../common/ConfirmDialog'
-import { usePayroll, useProcessPayroll, useGeneratePayroll, useDeletePayroll } from '../../hooks/usePayrolls'
+import { usePayroll, useGeneratePayroll, useDeletePayroll } from '../../hooks/usePayrolls'
 import { useSystemConfig } from '../../hooks/useConfig'
 import { parseApiError } from '../../utils/api-error'
 import { formatDate } from '../../utils/date-utils'
-import type { PayrollStatus } from '@soumya/shared'
 
 const fmtMoney = (n: number) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
-
-function StatusBadge({ status }: { status: PayrollStatus }) {
-  const m: Record<PayrollStatus, string> = {
-    draft:     'bg-gray-100 text-gray-700',
-    finalised: 'bg-blue-100 text-blue-700',
-    paid:      'bg-emerald-100 text-emerald-700',
-  }
-  return <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${m[status]}`}>{status}</span>
-}
 
 function Row({ label, children, strong }: { label: string; children: React.ReactNode; strong?: boolean }) {
   return (
@@ -34,20 +24,16 @@ export default function PayrollDetail() {
   const navigate = useNavigate()
   const { data: payroll, isLoading } = usePayroll(id ?? '')
   const { data: config } = useSystemConfig()
-  const process = useProcessPayroll()
   const regenerate = useGeneratePayroll()
   const remove = useDeletePayroll()
   const [pdfLoading, setPdfLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [confirm, setConfirm] = useState<{ action: 'finalise' | 'mark-paid' | 'revert' | 'regenerate' | 'delete'; label: string; description: string } | null>(null)
+  const [confirm, setConfirm] = useState<{ action: 'regenerate' | 'delete'; label: string; description: string } | null>(null)
 
   if (isLoading) return <div className="p-6"><LoadingSpinner /></div>
   if (!payroll) return <div className="p-6 text-gray-500">Payroll not found.</div>
 
-  const isDraft     = payroll.status === 'draft'
-  const isFinalised = payroll.status === 'finalised'
-  const isPaid      = payroll.status === 'paid'
-  const isPending = process.isPending || regenerate.isPending || remove.isPending
+  const isPending = regenerate.isPending || remove.isPending
 
   function runConfirmed() {
     if (!confirm || !id || !payroll) return
@@ -61,8 +47,6 @@ export default function PayrollDetail() {
       )
     } else if (confirm.action === 'delete') {
       remove.mutate(id, { onSuccess: () => navigate('/payroll'), onError })
-    } else {
-      process.mutate({ id, dto: { action: confirm.action } }, { onSuccess, onError })
     }
   }
 
@@ -111,7 +95,6 @@ export default function PayrollDetail() {
             <p className="text-xs text-gray-500 font-mono mt-0.5">{payroll.employee_name_snapshot} · {payroll.employee_id_snapshot}</p>
           </div>
         </div>
-        <StatusBadge status={payroll.status} />
       </div>
 
       {actionError && (
@@ -128,43 +111,17 @@ export default function PayrollDetail() {
           {pdfLoading ? 'Generating PDF…' : 'Download PDF'}
         </button>
         <button
-          onClick={() => setConfirm({ action: 'regenerate', label: 'Re-Generate', description: 'This will overwrite the saved values with a fresh computation from current attendance, leave and overtime data. Status will remain ' + payroll.status + '.' })}
+          onClick={() => setConfirm({ action: 'regenerate', label: 'Re-Generate', description: 'This will overwrite the saved values with a fresh computation from current attendance, leave and overtime data.' })}
           disabled={isPending}
           className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
           Re-Generate
         </button>
-        {isDraft && (
-          <button
-            onClick={() => setConfirm({ action: 'finalise', label: 'Finalise', description: 'Move this payroll to Finalised status. You can still re-generate after this.' })}
-            disabled={isPending}
-            className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50">
-            Finalise
-          </button>
-        )}
-        {isFinalised && (
-          <button
-            onClick={() => setConfirm({ action: 'mark-paid', label: 'Mark as Paid', description: 'Mark this payroll as Paid. Use this after the salary has been disbursed.' })}
-            disabled={isPending}
-            className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50">
-            Mark as Paid
-          </button>
-        )}
-        {(isFinalised || isPaid) && (
-          <button
-            onClick={() => setConfirm({ action: 'revert', label: 'Revert to Draft', description: 'Move this payroll back to Draft. Use only if you need to correct something.' })}
-            disabled={isPending}
-            className="px-4 py-2 text-sm border border-amber-300 text-amber-700 rounded-md hover:bg-amber-50 disabled:opacity-50">
-            Revert to Draft
-          </button>
-        )}
-        {isDraft && (
-          <button
-            onClick={() => setConfirm({ action: 'delete', label: 'Delete', description: 'Permanently delete this draft payroll. You can re-generate it any time.' })}
-            disabled={isPending}
-            className="ml-auto px-4 py-2 text-sm border border-red-300 text-red-700 rounded-md hover:bg-red-50 disabled:opacity-50">
-            Delete
-          </button>
-        )}
+        <button
+          onClick={() => setConfirm({ action: 'delete', label: 'Delete', description: 'Permanently delete this payroll. You can re-generate it any time.' })}
+          disabled={isPending}
+          className="ml-auto px-4 py-2 text-sm border border-red-300 text-red-700 rounded-md hover:bg-red-50 disabled:opacity-50">
+          Delete
+        </button>
       </div>
 
       {/* Two-column summary */}
@@ -183,12 +140,13 @@ export default function PayrollDetail() {
         <div className="bg-white border border-slate-200 rounded-xl p-5">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Attendance</h2>
           <dl>
-            <Row label="Working Days (full cycle)">{payroll.full_period_working_days}</Row>
-            <Row label="Working Days (after joining)">{payroll.effective_working_days}</Row>
+            <Row label="Working Days">{payroll.full_period_working_days}</Row>
             <Row label="Present Days">{payroll.present_days}</Row>
-            <Row label="Paid Leave Days">{payroll.paid_leave_days}</Row>
-            <Row label="Unpaid Absent">{payroll.unpaid_absent_days}</Row>
-            <Row label="Loss of Pay (from leave write-off)">{payroll.lop_from_writeoff_days}</Row>
+            <Row label="Paid Leaves (within balance)">{payroll.paid_leaves_within_balance}</Row>
+            <Row label="Unpaid Leaves (LOP)">{payroll.unpaid_leaves_lop}</Row>
+            {payroll.unpaid_absent_days > 0 && (
+              <Row label="Unexplained Absent">{payroll.unpaid_absent_days}</Row>
+            )}
             <Row label="Overtime Hours">{Number(payroll.overtime_hours).toFixed(1)}</Row>
           </dl>
         </div>
@@ -199,7 +157,10 @@ export default function PayrollDetail() {
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
           <div className="bg-slate-800 text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5">Earnings</div>
           <dl className="p-5">
-            <Row label={`Earned Salary (${payroll.present_days + payroll.paid_leave_days} days × ${fmtMoney(payroll.per_day_rate)})`}>{fmtMoney(payroll.earned_salary)}</Row>
+            <Row label="Monthly Salary">{fmtMoney(payroll.monthly_salary)}</Row>
+            <Row label="Per Day Salary">{fmtMoney(payroll.per_day_rate)}</Row>
+            <Row label={`Less: LOP (${payroll.total_lop_days} × ${fmtMoney(payroll.per_day_rate)})`}>− {fmtMoney(payroll.lop_deduction)}</Row>
+            <Row label="Earned Salary">{fmtMoney(payroll.earned_salary)}</Row>
             <Row label={`Overtime (${Number(payroll.overtime_hours).toFixed(1)} hrs)`}>{fmtMoney(payroll.overtime_pay)}</Row>
             <Row label="Gross Pay" strong>{fmtMoney(payroll.gross_pay)}</Row>
           </dl>
@@ -223,8 +184,6 @@ export default function PayrollDetail() {
       {/* Audit footer */}
       <div className="text-xs text-gray-400 flex flex-wrap gap-x-6">
         <span>Generated: {formatDate(payroll.generated_at)}</span>
-        {payroll.finalised_at && <span>Finalised: {formatDate(payroll.finalised_at)}</span>}
-        {payroll.paid_at && <span>Paid: {formatDate(payroll.paid_at)}</span>}
         <span>Last updated: {formatDate(payroll.updated_at)}</span>
       </div>
 

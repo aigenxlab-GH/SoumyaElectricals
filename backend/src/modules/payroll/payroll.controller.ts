@@ -60,12 +60,6 @@ export const payrollController = {
     } catch (err) { next(err) }
   },
 
-  async process(req: Request, res: Response, next: NextFunction) {
-    try {
-      res.json(ok(await payrollService.process(req.user!, req.params.id, req.body)))
-    } catch (err) { next(err) }
-  },
-
   async remove(req: Request, res: Response, next: NextFunction) {
     try {
       await payrollService.remove(req.user!, req.params.id)
