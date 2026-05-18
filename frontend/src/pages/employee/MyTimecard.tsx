@@ -3,8 +3,6 @@ import type { ReactNode } from 'react'
 import type { Timecard, Overtime } from '@soumya/shared'
 import { MonthPaginator } from '../../common/MonthPaginator'
 import { LoadingSpinner } from '../../common/LoadingSpinner'
-import { FilterBar } from '../../common/FilterBar'
-import type { ActiveFilter } from '../../common/FilterBar'
 import { TimecardList } from '../../components/timecards/TimecardList'
 import { TimecardForm } from '../../components/timecards/TimecardForm'
 import { BulkTimecardForm } from '../../components/timecards/BulkTimecardForm'
@@ -38,7 +36,7 @@ export default function MyTimecard() {
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [tcForm, setTcForm] = useState<TcFormState>(null)
   const [otForm, setOtForm] = useState<OtFormState>(null)
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'applied' | 'approved' | 'rejected'>('all')
 
   const { data: timecards = [], isLoading: tcLoading } = useTimecards(year, month)
   const { data: overtime = [], isLoading: otLoading } = useOvertime(year, month)
@@ -57,19 +55,17 @@ export default function MyTimecard() {
   const approverName = myManager?.full_name ?? 'Owner'
   const approverRole = myManager ? 'Manager' : 'Owner'
 
-  // Filter function for timecards
+  // Filter function for timecards — status-based only (date pagination is via MonthPaginator)
   const tcFilterFn = useMemo(() => {
-    if (!activeFilter) return undefined
-    const { criteria, value, from, to } = activeFilter
-    return (tc: Timecard) => {
-      const c = criteria as string
-      if (c === 'date') return tc.date === value
-      if (c === 'date_range') return (!from || tc.date >= from) && (!to || tc.date <= to)
-      if (c === 'status') return tc.status === value
-      if (c === 'name') return approverName.toLowerCase().includes(value.toLowerCase())
-      return true
-    }
-  }, [activeFilter, approverName])
+    if (statusFilter === 'all') return undefined
+    return (tc: Timecard) => tc.status === statusFilter
+  }, [statusFilter])
+
+  // Same filter for overtime, since user asked overtime + timecard applied rows to be visible
+  const otFilterFn = useMemo(() => {
+    if (statusFilter === 'all') return undefined
+    return (ot: Overtime) => ot.status === statusFilter
+  }, [statusFilter])
 
   return (
     <div className="space-y-0">
@@ -100,7 +96,19 @@ export default function MyTimecard() {
           </div>
         </div>
 
-        <FilterBar onFilter={setActiveFilter} onClear={() => setActiveFilter(null)} />
+        {/* Status filter — applies to both Timecards and Overtime below */}
+        <div className="flex items-end gap-3 bg-white border border-slate-200 rounded-lg p-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+              className="border border-slate-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              <option value="all">All</option>
+              <option value="applied">Applied</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
 
         {tcLoading ? <LoadingSpinner /> : (
           <TimecardList
@@ -136,6 +144,7 @@ export default function MyTimecard() {
             onDelete={(id) => deleteOt.mutate(id)}
             isDeleting={deleteOt.isPending}
             hidePayout
+            filterFn={otFilterFn}
           />
         )}
       </div>

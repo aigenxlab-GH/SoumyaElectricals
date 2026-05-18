@@ -75,7 +75,7 @@ export default function AuthLayout() {
 
           <div className="relative z-10">
             <div className="flex flex-wrap gap-2 mb-4">
-              {['People', 'Products', 'Inventory', 'Quotations'].map((tag) => (
+              {['People', 'Products', 'Inventory', 'Quotations', 'Offers'].map((tag) => (
                 <span
                   key={tag}
                   className="text-xs px-3 py-1 rounded-full border border-amber-400/40 text-amber-300 font-semibold tracking-wide bg-amber-400/5"

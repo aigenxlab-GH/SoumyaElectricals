@@ -69,7 +69,6 @@ export default function ManagerTimecardApproval() {
             onBulkProcess={(ids, action) => bulkProcess({ ids, action })}
             isPending={isPending}
             isBulkPending={isBulkPending}
-            showManager
             managerById={managerById}
             ownerName={ownerName}
           />
@@ -105,7 +104,6 @@ export default function ManagerTimecardApproval() {
             onBulkProcess={(ids, action) => bulkProcessOt({ ids, action })}
             isPending={isOtPending}
             isBulkPending={isBulkOtPending}
-            showManager
             managerById={managerById}
             ownerName={ownerName}
           />

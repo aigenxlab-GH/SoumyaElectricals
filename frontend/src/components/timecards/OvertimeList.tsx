@@ -15,16 +15,18 @@ interface Props {
   onDelete: (id: string) => void
   isDeleting: boolean
   hidePayout?: boolean   // true for employee/manager applicant view
+  filterFn?: (entry: Overtime) => boolean
 }
 
-export function OvertimeList({ entries, onEdit, onDelete, isDeleting, hidePayout = false }: Props) {
+export function OvertimeList({ entries, onEdit, onDelete, isDeleting, hidePayout = false, filterFn }: Props) {
   const [confirmId, setConfirmId] = useState<string | null>(null)
 
-  const { sorted, sort, toggle } = useSorting(entries, 'date', 'desc')
+  const visible = filterFn ? entries.filter(filterFn) : entries
+  const { sorted, sort, toggle } = useSorting(visible, 'date', 'desc')
   const { paged, page, totalPages, pageSize, total, rangeStart, rangeEnd, setPage, setPageSize } =
     usePagination(sorted)
 
-  if (entries.length === 0) return <EmptyState message="No overtime entries for this month." />
+  if (visible.length === 0) return <EmptyState message="No overtime entries match the current filters." />
 
   const thCls = 'text-left'
 

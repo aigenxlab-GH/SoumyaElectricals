@@ -62,7 +62,6 @@ export default function ManagerLeaveApproval() {
             onBulkProcess={(ids, action) => bulkProcess({ ids, action })}
             isPending={isPending}
             isBulkPending={isBulkPending}
-            showManager
             managerById={managerById}
             ownerName={ownerName}
           />

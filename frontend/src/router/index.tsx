@@ -54,6 +54,7 @@ export const router = createBrowserRouter([
           { path: '/my-calendar', element: <MyCalendar /> },
           { path: '/inventory', element: <InventoryPage /> },
           { path: '/quotations', element: <QuotationList /> },
+          { path: '/offers',     element: <QuotationList offerMode /> },
           { path: '/quotations/new', element: <CreateQuotation /> },
           { path: '/quotations/:id', element: <QuotationDetail /> },
           { path: '/quotations/:id/edit', element: <EditQuotation /> },

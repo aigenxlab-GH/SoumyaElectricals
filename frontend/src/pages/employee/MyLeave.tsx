@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Leave } from '@soumya/shared'
 import { MonthPaginator } from '../../common/MonthPaginator'
@@ -9,6 +9,7 @@ import { LeaveForm } from '../../components/leaves/LeaveForm'
 import { BulkLeaveForm } from '../../components/leaves/BulkLeaveForm'
 import { useLeaves, useLeaveBalance, useApplyLeave, useApplyBulkLeave, useUpdateLeave, useDeleteLeave } from '../../hooks/useLeaves'
 import { useSystemConfig } from '../../hooks/useConfig'
+import { useMyManager } from '../../hooks/useUsers'
 import { parseApiError } from '../../utils/api-error'
 
 type FormState = { mode: 'apply' } | { mode: 'bulk' } | { mode: 'edit'; leave: Leave } | null
@@ -35,9 +36,27 @@ export default function MyLeave() {
   const { data: leaves = [], isLoading: leavesLoading } = useLeaves(year, month)
   const { data: balance, isLoading: balanceLoading } = useLeaveBalance()
   const { data: sysConfig } = useSystemConfig()
+  const { data: myManager } = useMyManager()
   const monthlyCredit = sysConfig ? Math.floor(sysConfig.annual_leave_days / 12) : undefined
   const balanceRemaining = balance?.remaining ?? 0
   const holidayDates = sysConfig?.holidays?.map((h) => h.date) ?? []
+  const approverName = myManager?.full_name ?? 'Owner'
+
+  // Local filter state
+  const [statusFilter, setStatusFilter] = useState<'all' | 'applied' | 'approved' | 'rejected'>('all')
+  const [exactDate, setExactDate] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo]     = useState('')
+
+  const filterFn = useMemo(() => {
+    return (lv: Leave) => {
+      if (statusFilter !== 'all' && lv.status !== statusFilter) return false
+      if (exactDate && lv.date !== exactDate) return false
+      if (dateFrom && lv.date < dateFrom) return false
+      if (dateTo   && lv.date > dateTo)   return false
+      return true
+    }
+  }, [statusFilter, exactDate, dateFrom, dateTo])
 
   const applyLeave = useApplyLeave(year, month)
   const bulkLeave = useApplyBulkLeave(year, month)
@@ -57,12 +76,47 @@ export default function MyLeave() {
 
       {balanceLoading ? <LoadingSpinner /> : balance && <LeaveBalanceWidget balance={balance} monthlyCredit={monthlyCredit} />}
 
+      {/* Filters */}
+      <div className="flex flex-wrap items-end gap-3 bg-white border border-slate-200 rounded-lg p-3">
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+            className="border border-slate-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="all">All</option>
+            <option value="applied">Applied</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Date</label>
+          <input type="date" value={exactDate} onChange={(e) => setExactDate(e.target.value)}
+            className="border border-slate-300 rounded-md px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">From</label>
+          <input type="date" value={dateFrom} max={dateTo || undefined} onChange={(e) => setDateFrom(e.target.value)}
+            className="border border-slate-300 rounded-md px-2 py-1.5 text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">To</label>
+          <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(e) => setDateTo(e.target.value)}
+            className="border border-slate-300 rounded-md px-2 py-1.5 text-sm" />
+        </div>
+        {(statusFilter !== 'all' || exactDate || dateFrom || dateTo) && (
+          <button onClick={() => { setStatusFilter('all'); setExactDate(''); setDateFrom(''); setDateTo('') }}
+            className="text-xs text-slate-500 hover:text-slate-700 underline">Clear filters</button>
+        )}
+      </div>
+
       {leavesLoading ? <LoadingSpinner /> : (
         <LeaveList
           leaves={leaves}
           onEdit={(lv) => setForm({ mode: 'edit', leave: lv })}
           onDelete={(id) => deleteLeave.mutate(id)}
           isDeleting={deleteLeave.isPending}
+          approverName={approverName}
+          filterFn={filterFn}
         />
       )}
 

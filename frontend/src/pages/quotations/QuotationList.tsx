@@ -11,7 +11,7 @@ import {
 } from '../../hooks/useQuotations'
 import { useAuthStore } from '../../store/auth.store'
 import { parseApiError } from '../../utils/api-error'
-import { useUsers, useReportableUsers } from '../../hooks/useUsers'
+import { useUsers, useReportableUsers, useMyManager } from '../../hooks/useUsers'
 import type { Quotation, QuotationStatus, QuotationListParams } from '@soumya/shared'
 
 const STATUS_OPTIONS: QuotationStatus[] = ['draft', 'requested', 'approved', 'rejected', 'finalised', 'cancelled']
@@ -25,7 +25,7 @@ const chip = (active: boolean) =>
 const fmt = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
 const fmtMoney = (n: number) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
 
-export default function QuotationList() {
+export default function QuotationList({ offerMode = false }: { offerMode?: boolean } = {}) {
   const { user } = useAuthStore()
   const [searchParams, setSearchParams] = useSearchParams()
   const canApproveAny = user?.role !== 'employee'
@@ -33,9 +33,9 @@ export default function QuotationList() {
   const { dateFrom: defaultFrom, dateTo: defaultTo } = defaultDateRange()
 
   // Queue mode = "Pending my approval" chip active; deep-linkable via ?queue=pending
-  const [queueMode, setQueueMode] = useState(() => searchParams.get('queue') === 'pending')
-  // Multi-select status set — empty set = "All"
-  const [selectedStatuses, setSelectedStatuses] = useState<Set<QuotationStatus>>(new Set())
+  const [queueMode, setQueueMode] = useState(() => !offerMode && searchParams.get('queue') === 'pending')
+  // Multi-select status set — in offer mode it's locked to {finalised}
+  const [selectedStatuses, setSelectedStatuses] = useState<Set<QuotationStatus>>(offerMode ? new Set(['finalised']) : new Set())
   const [createdByFilter, setCreatedByFilter]   = useState<string>('')   // user UUID or '' = all
   const [search, setSearch]             = useState('')
   const [dateFrom, setDateFrom]         = useState(defaultFrom)
@@ -62,18 +62,21 @@ export default function QuotationList() {
   const { data: pendingList = [] } = usePendingQuotations({ enabled: canApproveAny })
   const pendingCount = pendingList.length
 
-  // Created By dropdown options — Owner sees all users; Manager sees self + team; Employee hides dropdown
+  // Created By dropdown options — Owner sees all users; Manager sees self + team + owner; Employee hides dropdown
   const { data: allUsers = [] } = useUsers({ enabled: user?.role === 'owner' })
   const { data: team = [] }     = useReportableUsers({ enabled: user?.role === 'manager' })
+  const { data: myManager }     = useMyManager()
   const creatorOptions: { id: string; full_name: string | null; employee_id: string }[] = useMemo(() => {
     if (user?.role === 'owner')   return allUsers.map((u) => ({ id: u.id, full_name: u.full_name, employee_id: u.employee_id }))
     if (user?.role === 'manager') {
       const self = { id: user.id, full_name: user.full_name ?? null, employee_id: user.employee_id }
       const others = team.filter((u) => u.id !== user.id).map((u) => ({ id: u.id, full_name: u.full_name, employee_id: u.employee_id }))
-      return [self, ...others]
+      // Manager's own manager is the Owner (or another manager — show whoever it is)
+      const ownerOption = myManager ? [{ id: myManager.id, full_name: myManager.full_name, employee_id: myManager.employee_id }] : []
+      return [self, ...others, ...ownerOption]
     }
     return []
-  }, [user, allUsers, team])
+  }, [user, allUsers, team, myManager])
 
   const queryParams: QuotationListParams = {
     status:    queueMode ? 'requested' : (selectedStatuses.size > 0 ? Array.from(selectedStatuses) : undefined),
@@ -242,10 +245,12 @@ export default function QuotationList() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Quotations</h1>
-        <Link to="/quotations/new" className="text-sm px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-          + New Quotation
-        </Link>
+        <h1 className="text-xl font-semibold text-gray-900">{offerMode ? 'Offers' : 'Quotations'}</h1>
+        {!offerMode && (
+          <Link to="/quotations/new" className="text-sm px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+            + New Quotation
+          </Link>
+        )}
       </div>
 
       {actionError && (
@@ -257,8 +262,8 @@ export default function QuotationList() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* Pending-my-approval chip (approvers only) */}
-        {canApproveAny && (
+        {/* Pending-my-approval chip (approvers only; hidden in offer mode) */}
+        {canApproveAny && !offerMode && (
           <button onClick={applyQueue} className={chip(queueMode)}>
             Pending my approval
             {pendingCount > 0 && (
@@ -269,13 +274,17 @@ export default function QuotationList() {
           </button>
         )}
 
-        {/* Status chips — multi-select; "All" clears */}
-        <button onClick={applyAllStatuses} className={chip(!queueMode && selectedStatuses.size === 0)}>All</button>
-        {STATUS_OPTIONS.map((s) => (
-          <button key={s} onClick={() => toggleStatus(s)} className={chip(!queueMode && selectedStatuses.has(s))}>
-            {s.charAt(0).toUpperCase() + s.slice(1)}
-          </button>
-        ))}
+        {/* Status chips — multi-select; "All" clears. Hidden in offer mode (locked to finalised) */}
+        {!offerMode && (
+          <>
+            <button onClick={applyAllStatuses} className={chip(!queueMode && selectedStatuses.size === 0)}>All</button>
+            {STATUS_OPTIONS.map((s) => (
+              <button key={s} onClick={() => toggleStatus(s)} className={chip(!queueMode && selectedStatuses.has(s))}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </>
+        )}
 
         {/* Created By filter (owner + manager only) */}
         {creatorOptions.length > 0 && (

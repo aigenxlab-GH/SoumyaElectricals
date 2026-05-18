@@ -22,6 +22,25 @@ function cellClass(day: number, year: number, month: number, data: Record<string
   return 'bg-white border border-gray-100'
 }
 
+function cellTooltip(day: number, year: number, month: number, data: Record<string, CalendarDayEntry>): string {
+  const fullDate = new Date(year, month - 1, day).toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+  const isSunday = new Date(year, month - 1, day).getDay() === 0
+  if (isSunday) return `${fullDate}\nSunday — Weekly Off`
+  const key = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  const entry = data[key]
+  if (!entry) return fullDate
+  if (entry.type === 'holiday')   return `${fullDate}\nHoliday${entry.label ? ': ' + entry.label : ''}`
+  if (entry.type === 'leave') {
+    const statusLabel = entry.status === 'approved' ? 'Approved' : entry.status === 'rejected' ? 'Rejected' : 'Applied'
+    return `${fullDate}\nLeave (${statusLabel})${entry.label ? '\nReason: ' + entry.label : ''}`
+  }
+  if (entry.type === 'timecard') {
+    const statusLabel = entry.status === 'approved' ? 'Approved' : entry.status === 'rejected' ? 'Rejected' : 'Applied'
+    return `${fullDate}\nTimecard (${statusLabel})${entry.label ? '\n' + entry.label : ''}`
+  }
+  return fullDate
+}
+
 interface Props {
   year: number
   month: number
@@ -42,7 +61,8 @@ export function AttendanceCalendar({ year, month, data }: Props) {
         {cells.map((day, i) => (
           <div
             key={i}
-            className={`h-10 rounded flex items-center justify-center text-sm font-medium ${day ? cellClass(day, year, month, data) : ''}`}
+            title={day ? cellTooltip(day, year, month, data) : undefined}
+            className={`h-10 rounded flex items-center justify-center text-sm font-medium ${day ? cellClass(day, year, month, data) : ''} ${day ? 'cursor-help' : ''}`}
           >
             {day}
           </div>

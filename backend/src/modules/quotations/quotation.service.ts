@@ -37,8 +37,11 @@ async function getDeliveryWeekAvailability(
 async function getScopeIds(user: AuthUser): Promise<string[] | undefined> {
   if (user.role === 'owner') return undefined  // all
   if (user.role === 'manager') {
-    const team = await userRepository.listReportableUsers(user.id)
-    return [user.id, ...team.map((u) => u.id)]
+    const team  = await userRepository.listReportableUsers(user.id)
+    const owner = await userRepository.findOwner()
+    const ids   = [user.id, ...team.map((u) => u.id)]
+    if (owner) ids.push(owner.id)   // manager sees Owner's quotations too (read + approve)
+    return ids
   }
   return [user.id]  // employee
 }
@@ -47,8 +50,11 @@ async function getScopeIds(user: AuthUser): Promise<string[] | undefined> {
 async function getApprovalScopeIds(user: AuthUser): Promise<string[] | undefined> {
   if (user.role === 'owner') return undefined  // sees all requested
   if (user.role === 'manager') {
-    const team = await userRepository.listReportableUsers(user.id)
-    return team.map((u) => u.id)  // employees only (not self)
+    const team  = await userRepository.listReportableUsers(user.id)
+    const owner = await userRepository.findOwner()
+    const ids   = team.map((u) => u.id)
+    if (owner) ids.push(owner.id)   // manager can approve Owner's submitted quotations too
+    return ids
   }
   throw new AppError('FORBIDDEN', 'Not authorised to approve quotations', 403)
 }
