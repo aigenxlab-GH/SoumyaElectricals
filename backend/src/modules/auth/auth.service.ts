@@ -6,7 +6,8 @@ import type { LoginDto, ChangePasswordDto } from './auth.schema'
 
 export const authService = {
   async login(dto: LoginDto) {
-    const syntheticEmail = employeeIdToEmail(dto.employee_id)
+    const employeeId = dto.employee_id.toUpperCase()
+    const syntheticEmail = employeeIdToEmail(employeeId)
 
     const { data, error } = await supabaseAuth.auth.signInWithPassword({
       email: syntheticEmail,
@@ -17,7 +18,7 @@ export const authService = {
       throw new AppError('INVALID_CREDENTIALS', 'Invalid employee ID or password', 401)
     }
 
-    const user = await authRepository.findUserByEmployeeId(dto.employee_id)
+    const user = await authRepository.findUserByEmployeeId(employeeId)
 
     // Back-fill leave_balance so it reflects months elapsed since joining.
     // Idempotent — safe to call on every login. Errors are non-fatal.
@@ -34,7 +35,7 @@ export const authService = {
   },
 
   async changePassword(userId: string, employeeId: string, dto: ChangePasswordDto) {
-    const syntheticEmail = employeeIdToEmail(employeeId)
+    const syntheticEmail = employeeIdToEmail(employeeId.toUpperCase())
 
     const { error: signInError } = await supabaseAuth.auth.signInWithPassword({
       email: syntheticEmail,
