@@ -70,7 +70,10 @@
       "Bash(sleep 8 && echo \"=== BACKEND ===\" && cat /c/Users/Admin/AppData/Local/Temp/claude/C--AIGenXLab-Projects-Soumya-Electricals-SoumyaElectricals/813fa497-dd60-490d-92c9-e1f13462ebc4/tasks/bcx72ywz7.output 2>&1 | tail -15 && echo \"=== FRONTEND ===\" && cat /c/Users/Admin/AppData/Local/Temp/claude/C--AIGenXLab-Projects-Soumya-Electricals-SoumyaElectricals/813fa497-dd60-490d-92c9-e1f13462ebc4/tasks/biy7kxp1u.output 2>&1 | tail -10)",
       "PowerShell(Get-NetTCPConnection -LocalPort 8585 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue } | Select-Object Id, ProcessName)",
       "Bash(echo \"Started PID: $!\")",
-      "Bash(echo \"PID: $!\")"
+      "Bash(echo \"PID: $!\")",
+      "Bash(findstr \"LISTENING\")",
+      "Bash(curl -s -X POST http://localhost:8585/api/v1/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"employee_id\\\\\":\\\\\"SE_5000\\\\\",\\\\\"password\\\\\":\\\\\"ChangeMe@2024!\\\\\"}\")",
+      "Bash(curl -s -X POST http://localhost:8585/api/v1/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"employee_id\\\\\":\\\\\"SE_5000\\\\\",\\\\\"password\\\\\":\\\\\"12345678\\\\\"}\")"
     ]
   }
 }
