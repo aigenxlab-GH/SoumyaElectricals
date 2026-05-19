@@ -73,7 +73,10 @@
       "Bash(echo \"PID: $!\")",
       "Bash(findstr \"LISTENING\")",
       "Bash(curl -s -X POST http://localhost:8585/api/v1/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"employee_id\\\\\":\\\\\"SE_5000\\\\\",\\\\\"password\\\\\":\\\\\"ChangeMe@2024!\\\\\"}\")",
-      "Bash(curl -s -X POST http://localhost:8585/api/v1/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"employee_id\\\\\":\\\\\"SE_5000\\\\\",\\\\\"password\\\\\":\\\\\"12345678\\\\\"}\")"
+      "Bash(curl -s -X POST http://localhost:8585/api/v1/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"employee_id\\\\\":\\\\\"SE_5000\\\\\",\\\\\"password\\\\\":\\\\\"12345678\\\\\"}\")",
+      "Bash(curl -s -X POST https://soumya-electricals-api.onrender.com/api/v1/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"employee_id\\\\\":\\\\\"SE_5000\\\\\",\\\\\"password\\\\\":\\\\\"87654321\\\\\"}\")",
+      "Bash(curl -s -X POST http://localhost:8585/api/v1/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"employee_id\\\\\":\\\\\"SE_5000\\\\\",\\\\\"password\\\\\":\\\\\"87654321\\\\\"}\")",
+      "Bash(curl -s -X POST http://localhost:8585/api/v1/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"employee_id\\\\\":\\\\\"SE_5000\\\\\",\\\\\"password\\\\\":\\\\\"Soumya@2024\\\\\"}\")"
     ]
   }
 }
