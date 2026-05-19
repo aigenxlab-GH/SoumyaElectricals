@@ -64,7 +64,7 @@ export default function ProductList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-gray-900">Products</h1>
         <Link to="/owner/products/new" className="text-sm px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
           + Add Product
@@ -99,18 +99,18 @@ export default function ProductList() {
               <thead className="bg-gray-50">
                 <tr>
                   {[
-                    { key: 'product_code', label: 'Product ID' },
-                    { key: 'name', label: 'Product Name' },
-                    { key: 'specification', label: 'Specification' },
-                    { key: 'category', label: 'Category' },
-                    { key: 'cost_price', label: 'Cost Price' },
-                    { key: 'selling_price', label: 'Selling Price' },
-                    { key: 'status', label: 'Status' },
-                  ].map(({ key, label }) => (
+                    { key: 'product_code',  label: 'Product ID',    hideMobile: true  },
+                    { key: 'name',          label: 'Product Name',  hideMobile: false },
+                    { key: 'specification', label: 'Specification', hideMobile: true  },
+                    { key: 'category',      label: 'Category',      hideMobile: true  },
+                    { key: 'cost_price',    label: 'Cost Price',    hideMobile: true  },
+                    { key: 'selling_price', label: 'Selling Price', hideMobile: false },
+                    { key: 'status',        label: 'Status',        hideMobile: false },
+                  ].map(({ key, label, hideMobile }) => (
                     <th
                       key={key}
                       onClick={() => handleSort(key as keyof Product)}
-                      className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
+                      className={`px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100${hideMobile ? ' hidden sm:table-cell' : ''}`}
                     >
                       {label}<SortIcon col={key as keyof Product} />
                     </th>
@@ -121,13 +121,13 @@ export default function ProductList() {
               <tbody className="divide-y divide-gray-100">
                 {filtered.map((product) => (
                   <tr key={product.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-xs text-gray-600">{product.product_code}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-600 hidden sm:table-cell">{product.product_code}</td>
                     <td className="px-4 py-3 font-medium text-gray-900">{product.name}</td>
-                    <td className="px-4 py-3 text-gray-600 max-w-xs">
+                    <td className="px-4 py-3 text-gray-600 max-w-xs hidden sm:table-cell">
                       <span title={product.specification} className="block truncate">{product.specification}</span>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{product.category}</td>
-                    <td className="px-4 py-3 text-gray-600">₹{Number(product.cost_price).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{product.category}</td>
+                    <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">₹{Number(product.cost_price).toFixed(2)}</td>
                     <td className="px-4 py-3 text-gray-600">₹{Number(product.selling_price).toFixed(2)}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${

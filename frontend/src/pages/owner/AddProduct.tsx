@@ -72,7 +72,7 @@ export default function AddProduct() {
             {errors.category && <p className="mt-1 text-xs text-red-600">{errors.category.message}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={label}>Cost Price (₹) <span className="text-red-500">*</span></label>
               <input type="number" step="0.01" min="0.01" {...register('cost_price', { valueAsNumber: true })} className={field} />

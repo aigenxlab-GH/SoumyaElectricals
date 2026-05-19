@@ -129,14 +129,14 @@ export function OvertimeApprovalSection({
                 <input type="checkbox" checked={allPageSelected} onChange={toggleAll}
                   className="rounded border-slate-300" />
               </th>
-              <SortableHeader label="Emp ID"    sortKey="employee_id" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
+              <SortableHeader label="Emp ID"    sortKey="employee_id" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={`${thCls} hidden sm:table-cell`} />
               <SortableHeader label="Name"      sortKey="full_name"   activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
-              <SortableHeader label="Role"      sortKey="role"        activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
-              {showManager && <SortableHeader label="Manager" sortKey="manager" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />}
+              <SortableHeader label="Role"      sortKey="role"        activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={`${thCls} hidden sm:table-cell`} />
+              {showManager && <SortableHeader label="Manager" sortKey="manager" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={`${thCls} hidden sm:table-cell`} />}
               <SortableHeader label="Date"      sortKey="date"        activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
               <SortableHeader label="Hours"     sortKey="hours"       activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
               <SortableHeader label="Payout (₹)" sortKey="payout"    activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
-              <SortableHeader label="Work Log"  sortKey="work_log"   activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
+              <SortableHeader label="Work Log"  sortKey="work_log"   activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={`${thCls} hidden sm:table-cell`} />
               <SortableHeader label="Status"    sortKey="status"      activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
               <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Actions</th>
             </tr>
@@ -152,13 +152,13 @@ export function OvertimeApprovalSection({
                   <input type="checkbox" checked={selected.has(item.id)} onChange={() => toggleOne(item.id)}
                     className="rounded border-slate-300" />
                 </td>
-                <td className="px-4 py-3.5">
+                <td className="px-4 py-3.5 hidden sm:table-cell">
                   <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
                     {item.users?.employee_id ?? '—'}
                   </span>
                 </td>
                 <td className="px-4 py-3.5 font-medium text-slate-900">{item.users?.full_name ?? '—'}</td>
-                <td className="px-4 py-3.5">
+                <td className="px-4 py-3.5 hidden sm:table-cell">
                   {item.users?.role ? (
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold
                       ${item.users.role === 'manager'
@@ -169,7 +169,7 @@ export function OvertimeApprovalSection({
                   ) : '—'}
                 </td>
                 {showManager && (
-                  <td className="px-4 py-3.5 text-slate-600 text-sm">
+                  <td className="px-4 py-3.5 text-slate-600 text-sm hidden sm:table-cell">
                     {item.users?.manager_id
                       ? (managerById[item.users.manager_id] ?? '—')
                       : (ownerName ?? '—')}
@@ -180,7 +180,7 @@ export function OvertimeApprovalSection({
                 <td className="px-4 py-3.5 text-slate-900 font-semibold">
                   ₹{Number(item.payout).toLocaleString('en-IN')}
                 </td>
-                <td className="px-4 py-3.5 text-slate-600 max-w-xs truncate">{item.work_log}</td>
+                <td className="px-4 py-3.5 text-slate-600 max-w-xs truncate hidden sm:table-cell">{item.work_log}</td>
                 <td className="px-4 py-3.5"><StatusBadge status={item.status} /></td>
                 <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
                   {item.status === 'applied' && (

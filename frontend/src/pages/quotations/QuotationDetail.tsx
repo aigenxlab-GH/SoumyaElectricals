@@ -205,7 +205,7 @@ export default function QuotationDetail() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
           <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Created By</h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><p className={label}>Name</p><p className={value}>{quotation.creator_name_snapshot}</p></div>
             <div><p className={label}>Employee ID</p><p className={`${value} font-mono`}>{quotation.creator_employee_id_snapshot}</p></div>
             {quotation.creator_mobile_snapshot && (
@@ -229,7 +229,7 @@ export default function QuotationDetail() {
             <div className="space-y-3">
               <div><p className={label}>Status</p><p className={value}><QuotationStatusBadge status={quotation.status} /></p></div>
               {quotation.rejected_by_snapshot && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <p className={label}>Rejected By</p>
                     <p className={value}>{quotation.rejected_by_snapshot}</p>

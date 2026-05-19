@@ -24,7 +24,7 @@ export function Paginator({
   if (total === 0) return null
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
+    <div className="flex flex-wrap items-center justify-between gap-y-2 px-4 py-3 border-t border-slate-200 bg-slate-50">
       {/* Left: record count */}
       <p className="text-xs text-slate-500">
         Showing{' '}

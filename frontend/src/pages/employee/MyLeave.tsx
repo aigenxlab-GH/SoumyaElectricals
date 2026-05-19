@@ -17,11 +17,11 @@ type FormState = { mode: 'apply' } | { mode: 'bulk' } | { mode: 'edit'; leave: L
 function Modal({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
           <h2 className="text-base font-semibold text-gray-900">{title}</h2>
         </div>
-        <div className="px-6 py-4">{children}</div>
+        <div className="px-6 py-4 overflow-y-auto">{children}</div>
       </div>
     </div>
   )
@@ -66,9 +66,9 @@ export default function MyLeave() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-xl font-semibold text-gray-900">My Leave</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <MonthPaginator year={year} month={month} onChange={(y, m) => { setYear(y); setMonth(m) }} />
           <button
             onClick={() => setShowFilters((v) => !v)}
@@ -79,8 +79,8 @@ export default function MyLeave() {
               <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-blue-600 text-white rounded-full">•</span>
             )}
           </button>
-          <button onClick={() => setForm({ mode: 'bulk' })} className="text-sm px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50">Bulk Apply</button>
-          <button onClick={() => setForm({ mode: 'apply' })} className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700">+ Apply</button>
+          <button onClick={() => setForm({ mode: 'bulk' })} className="text-sm px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 whitespace-nowrap">Bulk Apply</button>
+          <button onClick={() => setForm({ mode: 'apply' })} className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap">+ Apply</button>
         </div>
       </div>
 

@@ -112,19 +112,19 @@ export function UserTable({ users }: Props) {
       <table className="min-w-full divide-y divide-slate-200 text-sm">
         <thead className="bg-slate-50">
           <tr>
-            <SortableHeader label="Emp ID" sortKey="employee_id" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
-            <SortableHeader label="Name" sortKey="full_name" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
-            <SortableHeader label="Role" sortKey="role" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
-            <SortableHeader label="Manager" sortKey="manager_name" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
-            <SortableHeader label="Joined" sortKey="date_of_joining" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
-            <SortableHeader label="Status" sortKey="is_active" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
+            <SortableHeader label="Emp ID"  sortKey="employee_id"    activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={`${thCls} hidden sm:table-cell`} />
+            <SortableHeader label="Name"    sortKey="full_name"       activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
+            <SortableHeader label="Role"    sortKey="role"            activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
+            <SortableHeader label="Manager" sortKey="manager_name"    activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={`${thCls} hidden sm:table-cell`} />
+            <SortableHeader label="Joined"  sortKey="date_of_joining" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={`${thCls} hidden sm:table-cell`} />
+            <SortableHeader label="Status"  sortKey="is_active"       activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
             <th className="px-4 py-3 text-right font-semibold text-slate-500 uppercase tracking-wider text-xs">Actions</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-slate-100">
           {paged.map((user) => (
               <tr key={user.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-4 py-3.5">
+                <td className="px-4 py-3.5 hidden sm:table-cell">
                   <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
                     {user.employee_id}
                   </span>
@@ -139,7 +139,7 @@ export function UserTable({ users }: Props) {
                   </Link>
                 </td>
                 <td className="px-4 py-3.5"><RoleBadge role={user.role} /></td>
-                <td className="px-4 py-3.5 text-slate-600">
+                <td className="px-4 py-3.5 text-slate-600 hidden sm:table-cell">
                   {user.manager_name ? (
                     <>
                       <span>{user.manager_name}</span>
@@ -147,7 +147,7 @@ export function UserTable({ users }: Props) {
                     </>
                   ) : '—'}
                 </td>
-                <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">
+                <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap hidden sm:table-cell">
                   {formatDate(user.date_of_joining)}
                 </td>
                 <td className="px-4 py-3.5">

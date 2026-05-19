@@ -241,7 +241,7 @@ export default function SystemConfig() {
 
         {/* Holiday list */}
         <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base font-medium text-gray-900">Holidays ({fields.length})</h2>
             <button type="button" onClick={() => append({ date: '', name: '' })}
               className="text-sm px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50">

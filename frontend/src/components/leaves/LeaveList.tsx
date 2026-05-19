@@ -39,9 +39,9 @@ export function LeaveList({ leaves, onEdit, onDelete, isDeleting, approverName, 
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50">
               <SortableHeader label="Date" sortKey="date" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
-              <SortableHeader label="Reason" sortKey="reason" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
+              <SortableHeader label="Reason" sortKey="reason" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={`${thCls} hidden sm:table-cell`} />
               <SortableHeader label="Status" sortKey="status" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{approverName ? 'Approved By / Required From' : ''}</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider hidden sm:table-cell">{approverName ? 'Approved By / Required From' : ''}</th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
@@ -49,9 +49,9 @@ export function LeaveList({ leaves, onEdit, onDelete, isDeleting, approverName, 
             {paged.map((lv) => (
               <tr key={lv.id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-4 py-3 text-slate-900 whitespace-nowrap font-medium">{formatDate(lv.date)}</td>
-                <td className="px-4 py-3 text-slate-600 max-w-xs truncate">{lv.reason}</td>
+                <td className="px-4 py-3 text-slate-600 max-w-xs truncate hidden sm:table-cell">{lv.reason}</td>
                 <td className="px-4 py-3"><StatusBadge status={lv.status} /></td>
-                <td className="px-4 py-3 text-xs text-slate-600">
+                <td className="px-4 py-3 text-xs text-slate-600 hidden sm:table-cell">
                   {approverName ? (
                     lv.status === 'approved' ? (
                       <span><span className="text-slate-400">approved by</span> <span className="font-medium">{approverName}</span></span>

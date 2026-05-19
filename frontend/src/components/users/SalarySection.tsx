@@ -42,7 +42,7 @@ export function SalarySection({ userId }: Props) {
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-medium text-gray-900">Salary</h2>
           <p className="text-xs text-gray-500 mt-0.5">Owner-only. Used to generate monthly payroll. Changes are effective-dated.</p>
@@ -93,7 +93,7 @@ export function SalarySection({ userId }: Props) {
         {isLoading ? <LoadingSpinner /> : history.length === 0 ? (
           <p className="text-sm text-gray-400 italic">No salary set yet. Set one above to enable payroll for this user.</p>
         ) : (
-          <table className="w-full text-sm border border-gray-200 rounded-md overflow-hidden">
+          <div className="overflow-x-auto rounded-md border border-gray-200"><table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
               <tr><th className="px-3 py-2 text-left">Effective From</th><th className="px-3 py-2 text-right">Monthly Salary</th><th className="px-3 py-2 text-left">Note</th></tr>
             </thead>
@@ -106,7 +106,7 @@ export function SalarySection({ userId }: Props) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </div>

@@ -39,9 +39,9 @@ export function OvertimeList({ entries, onEdit, onDelete, isDeleting, hidePayout
               <SortableHeader label="Date" sortKey="date" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
               <SortableHeader label="Hours" sortKey="hours" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
               {!hidePayout && (
-                <SortableHeader label="Payout (₹)" sortKey="payout" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
+                <SortableHeader label="Payout (₹)" sortKey="payout" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={`${thCls} hidden sm:table-cell`} />
               )}
-              <SortableHeader label="Work Log" sortKey="work_log" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
+              <SortableHeader label="Work Log" sortKey="work_log" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={`${thCls} hidden sm:table-cell`} />
               <SortableHeader label="Status" sortKey="status" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
               <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
             </tr>
@@ -52,9 +52,9 @@ export function OvertimeList({ entries, onEdit, onDelete, isDeleting, hidePayout
                 <td className="px-4 py-3 text-slate-900 whitespace-nowrap font-medium">{formatDate(ot.date)}</td>
                 <td className="px-4 py-3 text-slate-900">{ot.hours}h</td>
                 {!hidePayout && (
-                  <td className="px-4 py-3 text-slate-900 font-medium">₹{Number(ot.payout).toLocaleString('en-IN')}</td>
+                  <td className="px-4 py-3 text-slate-900 font-medium hidden sm:table-cell">₹{Number(ot.payout).toLocaleString('en-IN')}</td>
                 )}
-                <td className="px-4 py-3 text-slate-600 max-w-xs truncate">{ot.work_log}</td>
+                <td className="px-4 py-3 text-slate-600 max-w-xs truncate hidden sm:table-cell">{ot.work_log}</td>
                 <td className="px-4 py-3"><StatusBadge status={ot.status} /></td>
                 <td className="px-4 py-3 text-right space-x-3">
                   {ot.status === 'applied' && (

@@ -145,12 +145,12 @@ export function FilterBar({
       )}
 
       {criteria === 'date_range' && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
-            className={inputCls} title="From" />
+            className={`${inputCls} w-36`} title="From" />
           <span className="text-slate-400 text-sm font-medium">to</span>
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
-            className={inputCls} title="To" />
+            className={`${inputCls} w-36`} title="To" />
         </div>
       )}
 

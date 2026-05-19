@@ -5,7 +5,7 @@ export default function AuthLayout() {
   return (
     /* Full-screen — inset box-shadow creates the visible border around the viewport */
     <div
-      className="min-h-screen bg-slate-200 flex items-center justify-center p-6"
+      className="min-h-screen bg-slate-200 flex items-center justify-center p-3 sm:p-6"
       style={{ boxShadow: 'inset 0 0 0 3px #94a3b8' }}
     >
       {/* ── Card with visible border + shadow ── */}
@@ -91,7 +91,7 @@ export default function AuthLayout() {
         </div>
 
         {/* ── Right pane — form area ── */}
-        <div className="flex-1 flex flex-col bg-slate-50 p-10">
+        <div className="flex-1 flex flex-col bg-slate-50 p-6 sm:p-10">
           <div className="flex-1 flex flex-col justify-center">
             <Outlet />
           </div>

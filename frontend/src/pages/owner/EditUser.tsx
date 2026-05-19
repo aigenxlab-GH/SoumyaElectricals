@@ -89,7 +89,8 @@ export default function EditUser() {
             <h2 className="text-sm font-semibold text-gray-700">Salary History</h2>
             <span className="text-xs text-gray-400">{salaryHistory.length} {salaryHistory.length === 1 ? 'entry' : 'entries'}</span>
           </div>
-          <table className="w-full text-sm border border-gray-200 rounded-md overflow-hidden">
+          <div className="overflow-x-auto rounded-md border border-gray-200">
+          <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
               <tr>
                 <th className="px-3 py-2 text-left">Effective From</th>
@@ -106,7 +107,7 @@ export default function EditUser() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
     </div>

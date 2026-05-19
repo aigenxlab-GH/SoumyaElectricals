@@ -4,7 +4,11 @@ import { useLogout } from '../hooks/useAuth'
 import { SIDEBAR_NAV } from '../utils/constants'
 import { cn } from '../utils/cn'
 
-export default function Sidebar() {
+interface Props {
+  onClose?: () => void
+}
+
+export default function Sidebar({ onClose }: Props) {
   const { user } = useAuthStore()
   const logout = useLogout()
 
@@ -14,24 +18,34 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="w-64 flex-shrink-0 flex flex-col border-r border-white/5"
+      className="w-64 h-full flex-shrink-0 flex flex-col border-r border-white/5"
       style={{ background: 'linear-gradient(180deg, #1a1f2e 0%, #1e2538 100%)' }}
     >
       {/* Brand header */}
       <div className="px-5 py-4 border-b border-white/10">
         <div className="flex items-center gap-3">
-          {/* Lightning bolt icon */}
           <div className="h-9 w-9 rounded-lg bg-amber-500/20 border border-amber-500/30
             flex items-center justify-center flex-shrink-0">
             <svg className="h-5 w-5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
               <path d="M13 2L4.09 12.5H11L10 22L20.91 11.5H14L13 2Z" />
             </svg>
           </div>
-          {/* Company name */}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-white font-bold text-sm leading-tight tracking-wide">Reerth Technologies</p>
             <p className="text-amber-400 font-semibold text-xs tracking-widest uppercase">Pvt. Ltd.</p>
           </div>
+          {/* Close button — mobile only */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden p-1 rounded-md text-white/40 hover:text-white/80 hover:bg-white/10 flex-shrink-0"
+              aria-label="Close menu"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -39,6 +53,7 @@ export default function Sidebar() {
       <NavLink
         to="/profile"
         title="View your profile"
+        onClick={onClose}
         className={({ isActive }) =>
           cn(
             'block px-4 py-3 border-b border-white/10 transition-colors',
@@ -65,6 +80,7 @@ export default function Sidebar() {
           <NavLink
             key={item.path}
             to={item.path}
+            onClick={onClose}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',

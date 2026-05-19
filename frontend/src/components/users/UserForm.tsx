@@ -134,7 +134,7 @@ export function UserForm(props: Props) {
       </Field>
 
       {/* ── Role & Sex ── */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Role" required error={errors.role?.message}>
           <select {...register('role')} className={inputCls}>
             <option value="employee">Employee</option>
@@ -152,7 +152,7 @@ export function UserForm(props: Props) {
       </div>
 
       {/* ── Dates ── */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field label="Date of Birth" required error={errors.date_of_birth?.message}>
           <input type="date" max={new Date().toISOString().split('T')[0]} {...register('date_of_birth')} className={inputCls} />
         </Field>

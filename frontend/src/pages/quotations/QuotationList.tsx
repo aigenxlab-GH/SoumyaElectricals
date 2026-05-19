@@ -253,7 +253,7 @@ export default function QuotationList({ offerMode = false }: { offerMode?: boole
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-gray-900">{offerMode ? 'Offers' : 'Quotations'}</h1>
         {!offerMode && (
           <Link to="/quotations/new" className="text-sm px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
@@ -315,18 +315,18 @@ export default function QuotationList({ offerMode = false }: { offerMode?: boole
         )}
 
         {/* Date range filter */}
-        <div className="flex items-center gap-2 ml-1">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-gray-500 whitespace-nowrap">Date:</span>
           <input
             type="date" value={dateFrom} max={dateTo}
             onChange={(e) => applyDateRange(e.target.value, dateTo)}
-            className="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-36"
           />
           <span className="text-xs text-gray-400">to</span>
           <input
             type="date" value={dateTo} min={dateFrom}
             onChange={(e) => applyDateRange(dateFrom, e.target.value)}
-            className="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-36"
           />
           <button onClick={clearDates}
             className="text-xs text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md px-2 py-1.5">
@@ -334,13 +334,13 @@ export default function QuotationList({ offerMode = false }: { offerMode?: boole
           </button>
         </div>
 
-        {/* Search */}
+        {/* Search — full width on mobile, auto on larger screens */}
         <input
           type="text"
           placeholder={offerMode ? 'Search client / offer ID…' : 'Search client / quotation ID…'}
           value={search}
           onChange={(e) => applySearch(e.target.value)}
-          className="ml-auto border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
+          className="w-full sm:w-56 sm:ml-auto border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
@@ -356,19 +356,19 @@ export default function QuotationList({ offerMode = false }: { offerMode?: boole
                 <thead className="bg-gray-50">
                   <tr>
                     {[
-                      ...(offerMode ? [{ key: 'offer_code', label: 'Offer ID' }] : []),
-                      { key: 'quotation_code',           label: 'Quotation ID' },
-                      { key: 'client_name',              label: 'Client Name' },
-                      { key: 'quotation_date',            label: 'Date' },
-                      { key: 'delivery_date',             label: 'Delivery Date' },
-                      { key: 'final_amount',              label: 'Final Amount' },
-                      { key: 'creator_name_snapshot',    label: 'Created By' },
-                      ...(!offerMode ? [{ key: 'status', label: 'Status' }] : []),
-                    ].map(({ key, label }) => (
+                      ...(offerMode ? [{ key: 'offer_code',            label: 'Offer ID',      hideMobile: false }] : []),
+                      { key: 'quotation_code',           label: 'Quotation ID',  hideMobile: true  },
+                      { key: 'client_name',              label: 'Client Name',   hideMobile: false },
+                      { key: 'quotation_date',           label: 'Date',          hideMobile: true  },
+                      { key: 'delivery_date',            label: 'Delivery Date', hideMobile: true  },
+                      { key: 'final_amount',             label: 'Final Amount',  hideMobile: false },
+                      { key: 'creator_name_snapshot',    label: 'Created By',    hideMobile: true  },
+                      ...(!offerMode ? [{ key: 'status', label: 'Status',        hideMobile: false }] : []),
+                    ].map(({ key, label, hideMobile }) => (
                       <th
                         key={key}
                         onClick={() => handleSort(key as keyof Quotation)}
-                        className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100 whitespace-nowrap"
+                        className={`px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100 whitespace-nowrap${hideMobile ? ' hidden sm:table-cell' : ''}`}
                       >
                         {label}<SortIcon col={key as keyof Quotation} />
                       </th>
@@ -386,14 +386,14 @@ export default function QuotationList({ offerMode = false }: { offerMode?: boole
                           </Link>
                         </td>
                       )}
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 hidden sm:table-cell">
                         <Link to={`/quotations/${q.id}`} className="font-mono text-xs text-blue-600 hover:underline">{q.quotation_code}</Link>
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900">{q.client_name}</td>
-                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{fmt(q.quotation_date)}</td>
-                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{fmt(q.delivery_date)}</td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap hidden sm:table-cell">{fmt(q.quotation_date)}</td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap hidden sm:table-cell">{fmt(q.delivery_date)}</td>
                       <td className="px-4 py-3 text-gray-800 font-medium whitespace-nowrap">{fmtMoney(q.final_amount)}</td>
-                      <td className="px-4 py-3 text-gray-600">
+                      <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">
                         <div>{q.creator_name_snapshot}</div>
                         <div className="text-xs text-gray-400 font-mono">{q.creator_employee_id_snapshot}</div>
                       </td>
@@ -469,7 +469,7 @@ export default function QuotationList({ offerMode = false }: { offerMode?: boole
       {/* Reject modal — requires reason */}
       {rejectingRow && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col overflow-y-auto p-6 space-y-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Reject Quotation</h3>
               <p className="text-xs text-gray-500 mt-1 font-mono">{rejectingRow.quotation_code} · {rejectingRow.client_name}</p>

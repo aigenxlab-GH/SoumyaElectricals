@@ -47,7 +47,7 @@ export default function ManagerTimecardApproval() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
         <h1 className="text-xl font-semibold text-gray-900">All Timecard Approvals</h1>
         {data.length > 0 && (
           <span className="text-sm text-slate-500">
@@ -87,7 +87,7 @@ export default function ManagerTimecardApproval() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
         <h2 className="text-base font-semibold text-gray-900">Pending Overtime</h2>
         {overtimes.length > 0 && (
           <span className="text-sm text-slate-500">{overtimes.length} pending</span>

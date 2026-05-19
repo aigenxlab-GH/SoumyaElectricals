@@ -60,7 +60,7 @@ export function ProductSelector({ alreadyAddedIds, deliveryDate, onSelect, onClo
           />
         </div>
 
-        <div className="overflow-y-auto flex-1">
+        <div className="overflow-y-auto overflow-x-auto flex-1">
           {isLoading ? (
             <div className="p-6"><LoadingSpinner /></div>
           ) : filtered.length === 0 ? (

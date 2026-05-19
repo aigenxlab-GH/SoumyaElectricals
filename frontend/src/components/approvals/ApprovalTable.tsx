@@ -207,14 +207,14 @@ export function ApprovalTable({
                     focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
                 />
               </th>
-              <SortableHeader label="Emp ID"  sortKey="employee_id" activeKey={sort.key} dir={sort.dir} onToggle={toggleSort} className="text-left" />
+              <SortableHeader label="Emp ID"  sortKey="employee_id" activeKey={sort.key} dir={sort.dir} onToggle={toggleSort} className="text-left hidden sm:table-cell" />
               <SortableHeader label="Name"    sortKey="full_name"   activeKey={sort.key} dir={sort.dir} onToggle={toggleSort} className="text-left" />
-              <SortableHeader label="Role"    sortKey="role"        activeKey={sort.key} dir={sort.dir} onToggle={toggleSort} className="text-left" />
+              <SortableHeader label="Role"    sortKey="role"        activeKey={sort.key} dir={sort.dir} onToggle={toggleSort} className="text-left hidden sm:table-cell" />
               {showManager && (
-                <SortableHeader label="Manager" sortKey="manager" activeKey={sort.key} dir={sort.dir} onToggle={toggleSort} className="text-left" />
+                <SortableHeader label="Manager" sortKey="manager" activeKey={sort.key} dir={sort.dir} onToggle={toggleSort} className="text-left hidden sm:table-cell" />
               )}
               <SortableHeader label="Date"   sortKey="date"        activeKey={sort.key} dir={sort.dir} onToggle={toggleSort} className="text-left" />
-              <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider text-xs">
+              <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider text-xs hidden sm:table-cell">
                 {type === 'timecard' ? 'Work Log' : 'Reason'}
               </th>
               <th className="px-4 py-3 text-right font-semibold text-slate-500 uppercase tracking-wider text-xs">Actions</th>
@@ -243,7 +243,7 @@ export function ApprovalTable({
                         focus:ring-2 focus:ring-blue-500 focus:ring-offset-0"
                     />
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-4 py-3.5 hidden sm:table-cell">
                     <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
                       {item.users?.employee_id ?? item.user_id.slice(0, 8)}
                     </span>
@@ -251,7 +251,7 @@ export function ApprovalTable({
                   <td className="px-4 py-3.5 font-semibold text-slate-900">
                     {item.users?.full_name ?? '—'}
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-4 py-3.5 hidden sm:table-cell">
                     {item.users?.role ? (
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold
                         ${item.users.role === 'manager'
@@ -262,7 +262,7 @@ export function ApprovalTable({
                     ) : '—'}
                   </td>
                   {showManager && (
-                    <td className="px-4 py-3.5 text-slate-600">
+                    <td className="px-4 py-3.5 text-slate-600 hidden sm:table-cell">
                       {item.users?.manager_id
                         ? (managerById[item.users.manager_id] ?? '—')
                         : (ownerName ?? '—')}
@@ -271,7 +271,7 @@ export function ApprovalTable({
                   <td className="px-4 py-3.5 text-slate-700 whitespace-nowrap font-medium">
                     {formatDate(item.date)}
                   </td>
-                  <td className="px-4 py-3.5 text-slate-500 max-w-xs truncate" title={detail}>
+                  <td className="px-4 py-3.5 text-slate-500 max-w-xs truncate hidden sm:table-cell" title={detail}>
                     {detail}
                   </td>
                   <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>

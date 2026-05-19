@@ -67,7 +67,7 @@ export default function EditProduct() {
 
       <div className="bg-white border border-gray-200 rounded-xl p-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={label}>Product ID</label>
               <input disabled value={product?.product_code ?? ''} className={`${field} bg-gray-50 text-gray-400`} readOnly />
@@ -100,7 +100,7 @@ export default function EditProduct() {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={label}>Cost Price (₹) <span className="text-red-500">*</span></label>
               <input type="number" step="0.01" min="0.01" {...register('cost_price', { valueAsNumber: true })} className={field} />

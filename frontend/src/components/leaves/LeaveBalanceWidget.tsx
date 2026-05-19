@@ -11,7 +11,7 @@ export function LeaveBalanceWidget({ balance, monthlyCredit }: Props) {
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h3 className="text-sm font-medium text-gray-700">Leave Balance</h3>
         {monthlyCredit !== undefined && (
           <span className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-2.5 py-0.5">

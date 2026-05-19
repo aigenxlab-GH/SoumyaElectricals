@@ -49,9 +49,9 @@ export function TimecardList({ timecards, onEdit, onDelete, isDeleting, approver
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50">
               <SortableHeader label="Date" sortKey="date" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
-              <SortableHeader label="Work Log" sortKey="work_log" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
+              <SortableHeader label="Work Log" sortKey="work_log" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={`${thCls} hidden sm:table-cell`} />
               <SortableHeader label="Status" sortKey="status" activeKey={sort.key} dir={sort.dir} onToggle={toggle} className={thCls} />
-              <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left">Approved By</th>
+              <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-left hidden sm:table-cell">Approved By</th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
@@ -59,9 +59,9 @@ export function TimecardList({ timecards, onEdit, onDelete, isDeleting, approver
             {paged.map((tc) => (
               <tr key={tc.id} className="hover:bg-slate-50 transition-colors">
                 <td className="px-4 py-3 text-slate-900 whitespace-nowrap font-medium">{formatDate(tc.date)}</td>
-                <td className="px-4 py-3 text-slate-600 max-w-xs truncate">{tc.work_log}</td>
+                <td className="px-4 py-3 text-slate-600 max-w-xs truncate hidden sm:table-cell">{tc.work_log}</td>
                 <td className="px-4 py-3"><StatusBadge status={tc.status} /></td>
-                <td className="px-4 py-3">{approvedByLabel(tc)}</td>
+                <td className="px-4 py-3 hidden sm:table-cell">{approvedByLabel(tc)}</td>
                 <td className="px-4 py-3 text-right space-x-3">
                   {tc.status === 'applied' && (
                     <>

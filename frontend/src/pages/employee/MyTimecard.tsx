@@ -19,11 +19,11 @@ type OtFormState = { mode: 'create' } | { mode: 'edit'; entry: Overtime } | null
 function Modal({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-40 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
           <h2 className="text-base font-semibold text-gray-900">{title}</h2>
         </div>
-        <div className="px-6 py-4">{children}</div>
+        <div className="px-6 py-4 overflow-y-auto">{children}</div>
       </div>
     </div>
   )
@@ -71,7 +71,7 @@ export default function MyTimecard() {
     <div className="space-y-0">
       {/* ── Timecard Section ── */}
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h1 className="text-xl font-semibold text-gray-900">My Timecard</h1>
           <div className="flex flex-wrap items-center gap-2">
             <MonthPaginator year={year} month={month} onChange={(y, m) => { setYear(y); setMonth(m) }} />
@@ -79,19 +79,19 @@ export default function MyTimecard() {
               onClick={() => setTcForm({ mode: 'bulk' })}
               className="text-sm px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50 whitespace-nowrap"
             >
-              Bulk Add Timecard
+              Bulk Add
             </button>
             <button
               onClick={() => setTcForm({ mode: 'create' })}
               className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap"
             >
-              + Add Timecard
+              + Timecard
             </button>
             <button
               onClick={() => setOtForm({ mode: 'create' })}
               className="text-sm px-3 py-1.5 bg-amber-600 text-white rounded-md hover:bg-amber-700 whitespace-nowrap"
             >
-              + Add Overtime
+              + Overtime
             </button>
           </div>
         </div>

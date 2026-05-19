@@ -174,7 +174,7 @@ export function QuotationForm({ existing, onSaveDraft, onSubmitForApproval, onSe
       {/* Created By */}
       <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
         <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Created By</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={label}>Name</label>
             <input disabled value={user?.full_name ?? ''} className={disabledField} />
@@ -197,7 +197,7 @@ export function QuotationForm({ existing, onSaveDraft, onSubmitForApproval, onSe
       {/* Client Details */}
       <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
         <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Client Details</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={label}>Client Name <span className="text-red-500">*</span></label>
             <input type="text" {...register('client_name')} className={field} />
@@ -247,7 +247,7 @@ export function QuotationForm({ existing, onSaveDraft, onSubmitForApproval, onSe
 
       {/* Products */}
       <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Products</h2>
           <div className="flex items-center gap-2">
             {!watchedDeliveryDate && (

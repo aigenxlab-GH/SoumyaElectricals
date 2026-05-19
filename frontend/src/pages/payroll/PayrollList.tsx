@@ -43,8 +43,14 @@ function HistoryTable({ rows, isLoading }: { rows: Payroll[]; isLoading: boolean
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50">
           <tr>
-            {['Month','Period','Net Pay','Generated','Action'].map((h) => (
-              <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+            {[
+              { label: 'Month',     cls: '' },
+              { label: 'Period',    cls: 'hidden sm:table-cell' },
+              { label: 'Net Pay',   cls: '' },
+              { label: 'Generated', cls: 'hidden sm:table-cell' },
+              { label: 'Action',    cls: '' },
+            ].map((h) => (
+              <th key={h.label} className={`px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap ${h.cls}`}>{h.label}</th>
             ))}
           </tr>
         </thead>
@@ -52,9 +58,9 @@ function HistoryTable({ rows, isLoading }: { rows: Payroll[]; isLoading: boolean
           {rows.map((p) => (
             <tr key={p.id} className="hover:bg-gray-50">
               <td className="px-4 py-2.5 font-medium text-gray-900">{MONTH_SHORT[p.period_month - 1]} {p.period_year}</td>
-              <td className="px-4 py-2.5 text-xs text-gray-500">{formatDate(p.period_start)} – {formatDate(p.period_end)}</td>
+              <td className="px-4 py-2.5 text-xs text-gray-500 hidden sm:table-cell">{formatDate(p.period_start)} – {formatDate(p.period_end)}</td>
               <td className="px-4 py-2.5 font-medium text-gray-800">{fmtMoney(p.net_pay)}</td>
-              <td className="px-4 py-2.5 text-xs text-gray-500">{formatDate(p.generated_at)}</td>
+              <td className="px-4 py-2.5 text-xs text-gray-500 hidden sm:table-cell">{formatDate(p.generated_at)}</td>
               <td className="px-4 py-2.5">
                 <Link to={`/payroll/${p.id}`} className="text-xs text-blue-600 hover:underline">View / PDF</Link>
               </td>
@@ -153,7 +159,7 @@ export default function PayrollList() {
 
       {bulkResult && (
         <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-start justify-between gap-2">
             <h3 className="text-sm font-semibold text-gray-900">
               Bulk result — {selectedMonth.label}: <span className="text-emerald-700">{bulkResult.success.length} succeeded</span>
               {bulkResult.failed.length > 0 && <span className="text-red-700">, {bulkResult.failed.length} failed</span>}
@@ -247,7 +253,7 @@ export default function PayrollList() {
       {/* Employee history */}
       {employeeId && selectedEmployee && (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+          <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-gray-900">
               Payroll History — {selectedEmployee.full_name} <span className="text-xs text-gray-400 font-mono">({selectedEmployee.employee_id})</span>
             </h2>
