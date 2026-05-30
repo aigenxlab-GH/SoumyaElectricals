@@ -80,6 +80,21 @@ export default function Login() {
 
   return (
     <div className="w-full max-w-sm mx-auto">
+      {/* Demo version banner */}
+      <div className="mb-5 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-center">
+        <p className="text-xs text-amber-800 leading-relaxed">
+          🎓 <span className="font-semibold">Demo Version</span> — Use demo credentials from our{' '}
+          <a
+            href="/user-manual.docx"
+            download="user-manual.docx"
+            className="underline font-semibold text-amber-900 hover:text-amber-700"
+          >
+            User Manual
+          </a>{' '}
+          to explore all features.
+        </p>
+      </div>
+
       <div className="mb-8">
         {tab === 'signin' ? (
           <>
