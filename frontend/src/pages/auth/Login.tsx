@@ -39,7 +39,7 @@ const errCls = 'text-xs text-red-600 mt-1.5'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { setAuth } = useAuthStore()
+  const { setAuth, updateUser } = useAuthStore()
   const queryClient = useQueryClient()
   const { mutate: login, isPending, error } = useLogin()
   const [tab, setTab] = useState<Tab>('signin')
@@ -69,6 +69,7 @@ export default function Login() {
       setAccessToken(result.access_token)
       setAuth(result.user, { access_token: result.access_token, refresh_token: result.refresh_token })
       await authApi.changePassword({ old_password: dto.current_password, new_password: dto.new_password })
+      updateUser({ is_default_password: false })   // clear force-change gate before navigating
       if (result.user.role === 'owner') navigate('/owner/dashboard')
       else navigate('/dashboard')
     } catch {

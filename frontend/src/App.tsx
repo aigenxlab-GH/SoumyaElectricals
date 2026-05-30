@@ -3,6 +3,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthContext, useAuthState } from './store/auth.store'
 import { router } from './router'
 
+// Dev-only: expose router.navigate so Puppeteer screenshot scripts can do
+// client-side navigation without page reloads (which would clear in-memory JWT).
+if (import.meta.env.DEV) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(window as any).__navigate = router.navigate
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
