@@ -28,6 +28,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Screenshot capture artifacts (intermediate files baked into user-manual.docx)
+screenshots/
+
 # Test coverage
 coverage/
 
